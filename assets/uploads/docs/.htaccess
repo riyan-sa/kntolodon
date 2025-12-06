@@ -1,0 +1,22 @@
+# Security: Block script execution in uploads directory
+# Hanya izinkan akses file dokumen PDF
+
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|py|jsp|asp|sh|shtml)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Allow access to PDF files only
+<FilesMatch "\.(pdf)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Disable directory listing
+Options -Indexes
+
+# Prevent accessing .htaccess and .htpasswd files
+<Files ~ "^\.ht">
+    Order allow,deny
+    Deny from all
+</Files>

@@ -1,0 +1,15 @@
+/* Admin Dashboard Page Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom smooth hover effects */
+.card-zoom-image {
+    transition: transform 0.7s ease;
+}
+
+.group:hover .card-zoom-image {
+    transform: scale(1.05);
+}

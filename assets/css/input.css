@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+    --bg-base-app: url('/assets/images/backgrounds/base-app-bg.jpg');
+}
+
+/* Utility classes for common patterns */
+.logo-scale {
+    transform: scale(6);
+    transform-origin: left center;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}

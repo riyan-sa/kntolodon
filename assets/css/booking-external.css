@@ -1,0 +1,32 @@
+/* Booking Eksternal (Super Admin) Page Styles */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+.hide {
+    display: none;
+}
+
+.active-tab {
+    border-bottom: 3px solid #2563EB;
+    color: #1F2937;
+    font-weight: 600;
+}
+
+.inactive-tab {
+    color: #6B7280;
+    border-bottom: 3px solid transparent;
+}
+
+/* Custom scrollbar untuk tabel jika data banyak */
+.table-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background-color: #CBD5E1;
+    border-radius: 4px;
+}

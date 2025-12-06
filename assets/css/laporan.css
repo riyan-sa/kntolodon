@@ -1,0 +1,22 @@
+/* Laporan Peminjaman Page Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Utility untuk menyembunyikan tab yang tidak aktif */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Style border bottom tab aktif */
+.tab-btn.active {
+    border-bottom: 2px solid #0284c7; /* Sky-600 */
+    color: #0284c7;
+    font-weight: 600;
+}

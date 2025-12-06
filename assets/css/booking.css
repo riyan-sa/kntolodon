@@ -1,0 +1,97 @@
+/* Booking Form Page Styles */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F8F9FA;
+}
+
+/* Utilitas kustom untuk input agar menyatu dengan desain bersih */
+.clean-input {
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    width: 100%;
+    padding: 4px 0;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.clean-input:focus {
+    border-bottom-color: #0284c7; /* Sky-600 */
+}
+
+/* Styling khusus untuk Time Input agar berbentuk Pill/Lonjong */
+.time-pill {
+    border-radius: 9999px; /* Full rounded */
+    text-align: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Animasi sederhana untuk modal */
+.modal {
+    transition: opacity 0.25s ease;
+}
+
+body.modal-active {
+    overflow-x: hidden;
+    overflow-y: visible !important;
+}
+
+/* Custom styling untuk input type date agar terlihat bersih */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+/* ==================== STYLING ANGGOTA CARD ==================== */
+
+/* Card anggota dengan animasi */
+.anggota-card {
+    transition: all 0.3s ease;
+    min-height: 140px;
+}
+
+.anggota-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #0284c7;
+}
+
+/* Tombol hapus anggota */
+.btn-hapus-anggota {
+    opacity: 0;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.anggota-card:hover .btn-hapus-anggota {
+    opacity: 1;
+}
+
+/* Tombol tambah anggota */
+.btn-tambah-anggota {
+    transition: all 0.2s ease;
+}
+
+.btn-tambah-anggota:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+}
+
+.btn-tambah-anggota:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Container grid responsive */
+#anggota-container {
+    min-height: 100px;
+}
+
+#anggota-container:empty::before {
+    content: 'Klik "Tambah Anggota" untuk menambahkan anggota booking';
+    display: block;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.875rem;
+    padding: 2rem;
+    grid-column: 1 / -1;
+}

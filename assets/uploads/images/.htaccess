@@ -1,0 +1,22 @@
+# Security: Block script execution in uploads directory
+# Hanya izinkan akses file gambar dan dokumen
+
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|py|jsp|asp|sh|shtml)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Allow access to image files
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|bmp|ico|svg)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Disable directory listing
+Options -Indexes
+
+# Prevent accessing .htaccess and .htpasswd files
+<Files ~ "^\.ht">
+    Order allow,deny
+    Deny from all
+</Files>

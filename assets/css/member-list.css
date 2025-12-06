@@ -1,0 +1,60 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #F8F9FA;
+}
+
+.tab-active {
+    background-color: #1D4ED8;
+    color: white;
+    border: 1px solid #1D4ED8;
+}
+
+.tab-inactive {
+    background-color: white;
+    color: #374151;
+    border: 1px solid #E5E7EB;
+}
+
+#memberModal {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.hidden-modal {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.visible-modal {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.edit-input {
+    border-bottom: 1px solid #ccc;
+    width: 100%;
+    text-align: center;
+    padding: 4px;
+    outline: none;
+    background: transparent;
+    transition: border-color 0.2s;
+}
+
+.edit-input:focus {
+    border-bottom: 2px solid #1D74BD;
+}
+
+/* Flash message animation */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

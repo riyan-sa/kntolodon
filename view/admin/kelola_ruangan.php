@@ -1,0 +1,367 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Access Control: Only Admin and Super Admin
+if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['Admin', 'Super Admin'])) {
+    header('Location: index.php?page=dashboard');
+    exit;
+}
+
+require __DIR__ . '/../components/head.php';
+
+// Default placeholder image jika tidak ada foto
+$defaultImage = $asset('/assets/image/room.png');
+?>
+
+<title>Kelola Ruangan - Admin Dashboard</title>
+<link rel="stylesheet" href="<?= $asset('assets/css/kelola-ruangan.css') ?>">
+</head>
+
+<body class="bg-slate-50 h-full flex flex-col">
+
+    <?php require __DIR__ . '/../components/navbar_admin.php'; ?>
+
+    <!-- konten utama -->
+    <main class="grow py-8 max-w-7xl mx-auto w-full px-4 lg:px-8">
+
+        <!-- Grid Ruangan -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <?php foreach ($rooms as $room): 
+                $fotoRuangan = !empty($room['foto_ruangan']) ? $asset($room['foto_ruangan']) : $defaultImage;
+                $isAvailable = $room['status_ruangan'] === 'Tersedia';
+            ?>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col md:flex-row min-h-[280px] transition hover:shadow-md">
+                    <div class="w-full md:w-5/12 relative h-48 md:h-auto">
+                        <img src="<?= $fotoRuangan ?>" alt="<?= htmlspecialchars($room['nama_ruangan']) ?>" class="absolute inset-0 w-full h-full object-cover">
+                    </div>
+
+                    <div class="w-full md:w-7/12 p-4 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-3"><?= htmlspecialchars($room['nama_ruangan']) ?></h3>
+                            <div class="text-sm text-slate-500 space-y-2">
+                                <p>Jenis: 
+                                    <span class="font-medium <?= $room['jenis_ruangan'] === 'Ruang Umum' ? 'text-blue-600' : 'text-purple-600' ?>">
+                                        <?= htmlspecialchars($room['jenis_ruangan']) ?>
+                                    </span>
+                                    <?php if ($room['jenis_ruangan'] === 'Ruang Umum'): ?>
+                                        <span class="text-xs text-blue-500">(User)</span>
+                                    <?php else: ?>
+                                        <span class="text-xs text-purple-500">(Eksternal)</span>
+                                    <?php endif; ?>
+                                </p>
+                                <p>Minimal: <span class="font-medium text-slate-700"><?= $room['minimal_kapasitas_ruangan'] ?></span></p>
+                                <p>Maksimal: <span class="font-medium text-slate-700"><?= $room['maksimal_kapasitas_ruangan'] ?></span></p>
+                                <p>Status:
+                                    <span class="<?= $isAvailable ? 'text-green-600' : 'text-red-600' ?> font-medium">
+                                        <?= htmlspecialchars($room['status_ruangan']) ?>
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 space-y-2">
+                            <button onclick="openEditModal(<?= $room['id_ruangan'] ?>)" class="block w-full py-2 bg-white hover:bg-gray-300 rounded text-center text-sky-500 font-semibold text-sm hover:text-sky-600 border border-sky-500 transition-colors">
+                                Update
+                            </button>
+                            <button onclick="openDeleteModal(<?= $room['id_ruangan'] ?>)" class="w-full bg-red-700 hover:bg-red-800 text-white text-sm font-bold py-2 rounded shadow-sm transition-colors">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+        </div>
+
+        <!-- Tombol Tambah Ruangan -->
+        <div class="mt-10 flex justify-center">
+            <button onclick="openAddModal()" class="relative group w-full max-w-lg h-40 rounded-xl overflow-hidden shadow-lg border-2 border-sky-500 cursor-pointer block">
+                <img src="<?= $defaultImage ?>"
+                    alt="Tambah Ruangan"
+                    class="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:scale-105">
+
+                <div class="absolute inset-0 bg-black/20"></div>
+
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="bg-sky-400/90 text-black px-8 py-3 rounded-lg font-bold text-lg shadow-lg backdrop-blur-sm transition group-hover:bg-sky-400">
+                        Tambah Ruangan
+                    </span>
+                </div>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Modal Tambah Ruangan -->
+    <div id="addModal" class="fixed inset-0 bg-white/40 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-slate-800">Tambah Ruangan Baru</h2>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form method="POST" action="index.php?page=admin&action=tambah_ruangan" enctype="multipart/form-data" class="p-6">
+                <div class="space-y-4">
+                    <!-- Nama Ruangan -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Nama Ruangan *</label>
+                        <input type="text" name="nama_ruangan" required 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                            placeholder="Contoh: Ruang Layar">
+                    </div>
+
+                    <!-- Jenis Ruangan -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Jenis Ruangan *</label>
+                        <select name="jenis_ruangan" required 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                            <option value="">Pilih Jenis Ruangan</option>
+                            <option value="Ruang Umum">Ruang Umum (Untuk booking user biasa)</option>
+                            <option value="Ruang Rapat">Ruang Rapat (Untuk booking eksternal Super Admin)</option>
+                        </select>
+                        <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p class="text-xs text-blue-800">
+                                <strong>📌 Penting:</strong><br>
+                                • <strong>Ruang Umum:</strong> User biasa (Mahasiswa/Dosen/Tendik) bisa booking via dashboard<br>
+                                • <strong>Ruang Rapat:</strong> Hanya Super Admin yang bisa booking untuk instansi eksternal (perlu surat resmi)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Kapasitas -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Kapasitas Minimal *</label>
+                            <input type="number" name="minimal_kapasitas" min="1" required 
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                placeholder="2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Kapasitas Maksimal *</label>
+                            <input type="number" name="maksimal_kapasitas" min="1" required 
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                placeholder="12">
+                        </div>
+                    </div>
+
+                    <!-- Status Ruangan - Hanya untuk kondisi khusus -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Status Ruangan *</label>
+                        <select name="status_ruangan" required 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                            <option value="Tersedia">Tersedia (Default - Auto-update berdasarkan booking)</option>
+                            <option value="Dalam Perbaikan">Dalam Perbaikan (Manual - Ruangan tidak bisa dibooking)</option>
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Status "Tersedia/Tidak Tersedia" akan otomatis berubah sesuai jadwal booking aktif.
+                        </p>
+                    </div>
+
+                    <!-- Deskripsi -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Deskripsi</label>
+                        <textarea name="deskripsi" rows="3" 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                            placeholder="Contoh: Audio Visual"></textarea>
+                    </div>
+
+                    <!-- Tata Tertib -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Tata Tertib</label>
+                        <textarea name="tata_tertib" rows="3" 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                            placeholder="Contoh: 1. Jangan membuang sampah di ruangan tersebut."></textarea>
+                    </div>
+
+                    <!-- Foto Ruangan -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Foto Ruangan</label>
+                        <input type="file" name="foto_ruangan" accept="image/jpeg,image/png,image/webp,image/jpg" 
+                            onchange="previewImage(event, 'addPreview')"
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                        <p class="text-xs text-slate-500 mt-1">Format: JPEG, PNG, WEBP (Max 5MB)</p>
+                        <div id="addPreview" class="mt-3 hidden">
+                            <img src="" alt="Preview" class="w-full h-48 object-cover rounded-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3 justify-end">
+                    <button type="button" onclick="closeAddModal()" 
+                        class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
+                        Batal
+                    </button>
+                    <button type="submit" 
+                        class="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium">
+                        Tambah Ruangan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit Ruangan -->
+    <div id="editModal" class="fixed inset-0 bg-white/40 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-slate-800">Edit Ruangan</h2>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form method="POST" action="index.php?page=admin&action=update_ruangan" enctype="multipart/form-data" class="p-6">
+                <input type="hidden" name="id_ruangan" id="edit_id_ruangan">
+                
+                <div class="space-y-4">
+                    <!-- Nama Ruangan -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Nama Ruangan *</label>
+                        <input type="text" name="nama_ruangan" id="edit_nama_ruangan" required 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                    </div>
+
+                    <!-- Jenis Ruangan -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Jenis Ruangan *</label>
+                        <select name="jenis_ruangan" id="edit_jenis_ruangan" required 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                            <option value="Ruang Umum">Ruang Umum (Untuk booking user biasa)</option>
+                            <option value="Ruang Rapat">Ruang Rapat (Untuk booking eksternal Super Admin)</option>
+                        </select>
+                        <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p class="text-xs text-blue-800">
+                                <strong>📌 Penting:</strong><br>
+                                • <strong>Ruang Umum:</strong> User biasa (Mahasiswa/Dosen/Tendik) bisa booking via dashboard<br>
+                                • <strong>Ruang Rapat:</strong> Hanya Super Admin yang bisa booking untuk instansi eksternal (perlu surat resmi)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Kapasitas -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Kapasitas Minimal *</label>
+                            <input type="number" name="minimal_kapasitas" id="edit_minimal_kapasitas" min="1" required 
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Kapasitas Maksimal *</label>
+                            <input type="number" name="maksimal_kapasitas" id="edit_maksimal_kapasitas" min="1" required 
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <!-- Status Ruangan - Hanya untuk kondisi khusus -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Status Ruangan *</label>
+                        <select name="status_ruangan" id="edit_status_ruangan" required 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                            <option value="Tersedia">Tersedia (Default - Auto-update berdasarkan booking)</option>
+                            <option value="Tidak Tersedia">Tidak Tersedia (Sedang digunakan - Auto-update)</option>
+                            <option value="Dalam Perbaikan">Dalam Perbaikan (Manual - Ruangan tidak bisa dibooking)</option>
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Status "Tersedia/Tidak Tersedia" akan otomatis berubah sesuai jadwal booking aktif.
+                        </p>
+                    </div>
+
+                    <!-- Deskripsi -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Deskripsi</label>
+                        <textarea name="deskripsi" id="edit_deskripsi" rows="3" 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"></textarea>
+                    </div>
+
+                    <!-- Tata Tertib -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Tata Tertib</label>
+                        <textarea name="tata_tertib" id="edit_tata_tertib" rows="3" 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"></textarea>
+                    </div>
+
+                    <!-- Foto Ruangan Current -->
+                    <div id="edit_current_photo_container" class="hidden">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Foto Saat Ini</label>
+                        <img id="edit_current_photo" src="" alt="Foto Ruangan" class="w-full h-48 object-cover rounded-lg mb-2">
+                    </div>
+
+                    <!-- Foto Ruangan -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Ganti Foto Ruangan</label>
+                        <input type="file" name="foto_ruangan" accept="image/jpeg,image/png,image/webp,image/jpg" 
+                            onchange="previewImage(event, 'editPreview')"
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                        <p class="text-xs text-slate-500 mt-1">Format: JPEG, PNG, WEBP (Max 5MB). Kosongkan jika tidak ingin mengganti foto.</p>
+                        <div id="editPreview" class="mt-3 hidden">
+                            <img src="" alt="Preview" class="w-full h-48 object-cover rounded-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3 justify-end">
+                    <button type="button" onclick="closeEditModal()" 
+                        class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
+                        Batal
+                    </button>
+                    <button type="submit" 
+                        class="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium">
+                        Update Ruangan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Delete Confirmation -->
+    <div id="deleteModal" class="fixed inset-0 bg-white/40 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-center text-slate-800 mb-2">Hapus Ruangan?</h3>
+                <p class="text-center text-slate-600 mb-6">
+                    Apakah Anda yakin ingin menghapus ruangan <span id="delete_room_name" class="font-semibold"></span>? 
+                    Tindakan ini tidak dapat dibatalkan.
+                </p>
+
+                <form method="POST" action="index.php?page=admin&action=delete_ruangan">
+                    <input type="hidden" name="id_ruangan" id="delete_id_ruangan">
+                    
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeDeleteModal()" 
+                            class="flex-1 px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
+                            Batal
+                        </button>
+                        <button type="submit" 
+                            class="flex-1 px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">
+                            Hapus
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Expose asset base path and room data to external scripts
+        window.ASSET_BASE_PATH = '<?= $basePath ?>';
+        window.ROOMS_DATA = <?= json_encode($rooms) ?>;
+    </script>
+    <script src="<?= $asset('assets/js/kelola-ruangan.js') ?>" defer></script>
+
+</body>
+
+</html>
