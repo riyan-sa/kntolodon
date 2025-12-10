@@ -24,12 +24,30 @@ let currentItemType = 'user';
 document.addEventListener('DOMContentLoaded', function() {
     // Tab switching
     document.querySelectorAll('[data-member-tab]').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
             const tabName = this.getAttribute('data-tab-name');
             switchTab(tabName);
             return false;
         });
     });
+    
+    // Auto-submit form on dropdown change (Prodi & Status)
+    const filterKelas = document.getElementById('filter-kelas');
+    const filterStatus = document.getElementById('filter-status');
+    const filterForm = document.querySelector('form[action="index.php"]');
+    
+    if (filterKelas && filterForm) {
+        filterKelas.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    
+    if (filterStatus && filterForm) {
+        filterStatus.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
     
     // Add modal button
     const btnAdd = document.querySelector('[data-modal-action="add"]');
@@ -60,49 +78,64 @@ function switchTab(tab) {
 
     const btnUser = document.getElementById('btn-tab-user');
     const btnAdmin = document.getElementById('btn-tab-admin');
-    const labelId = document.getElementById('label-id');
     const filterKelas = document.getElementById('filter-kelas-container');
-    const headerId = document.getElementById('header-id');
-    const headerExtra = document.getElementById('header-extra');
-    const headerValidasi = document.getElementById('header-validasi');
     const listUser = document.getElementById('list-container-user');
     const listAdmin = document.getElementById('list-container-admin');
     const fabContainer = document.getElementById('fab-container');
+    const paginationAdmin = document.getElementById('pagination-admin');
+    const tabInput = document.getElementById('current-tab-input');
+    const searchNama = document.getElementById('search-nama');
+    const searchNomorInduk = document.getElementById('search-nomor-induk');
+    const labelNomorInduk = document.getElementById('label-nomor-induk');
+    const filterStatus = document.getElementById('filter-status');
 
     if (tab === 'user') {
-        btnUser.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-active cursor-default";
-        btnAdmin.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-inactive hover:bg-gray-100";
+        if (btnUser) btnUser.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-active cursor-default";
+        if (btnAdmin) btnAdmin.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-inactive hover:bg-gray-100";
 
-        labelId.textContent = "Nomor Induk :";
-        filterKelas.style.display = "flex";
-        headerId.textContent = "Nomor Induk";
-        headerExtra.textContent = "Prodi";
-        if (headerValidasi) headerValidasi.style.display = "block"; // Show Foto Validasi header
+        if (filterKelas) filterKelas.style.display = "flex";
+        if (labelNomorInduk) labelNomorInduk.textContent = "Nomor Induk :";
 
-        listUser.classList.remove('hidden');
-        listAdmin.classList.add('hidden');
+        if (listUser) listUser.classList.remove('hidden');
+        if (listAdmin) listAdmin.classList.add('hidden');
+        
+        // Hide admin pagination, show user pagination (pagination container not hidden, part of list)
+        if (paginationAdmin) {
+            paginationAdmin.classList.add('hidden');
+            paginationAdmin.classList.remove('flex');
+        }
+        
         if (fabContainer) fabContainer.classList.add('hidden'); // Hide Add Button on User Tab
+        
+        // Update form field names for user tab
+        if (searchNama) searchNama.setAttribute('name', 'nama');
+        if (searchNomorInduk) searchNomorInduk.setAttribute('name', 'nomor_induk');
+        if (filterStatus) filterStatus.setAttribute('name', 'status');
+        if (tabInput) tabInput.value = 'user';
     } else {
-        btnUser.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-inactive hover:bg-gray-100";
-        btnAdmin.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-active cursor-default";
+        if (btnUser) btnUser.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-inactive hover:bg-gray-100";
+        if (btnAdmin) btnAdmin.className = "px-12 py-2 rounded-full font-semibold shadow-sm transition-all tab-active cursor-default";
 
-        labelId.textContent = "NIP :";
-        filterKelas.style.display = "none";
-        headerId.textContent = "NIP";
-        headerExtra.textContent = "";
-        if (headerValidasi) headerValidasi.style.display = "none"; // Hide Foto Validasi header
+        if (filterKelas) filterKelas.style.display = "none";
+        if (labelNomorInduk) labelNomorInduk.textContent = "NIP :";
 
-        listUser.classList.add('hidden');
-        listAdmin.classList.remove('hidden');
+        if (listUser) listUser.classList.add('hidden');
+        if (listAdmin) listAdmin.classList.remove('hidden');
+        
+        // Show admin pagination if exists
+        if (paginationAdmin) {
+            paginationAdmin.classList.remove('hidden');
+            paginationAdmin.classList.add('flex');
+        }
+        
         if (fabContainer) fabContainer.classList.remove('hidden'); // Show Add Button on Admin Tab (if Super Admin)
+        
+        // Update form field names for admin tab
+        if (searchNama) searchNama.setAttribute('name', 'nama_admin');
+        if (searchNomorInduk) searchNomorInduk.setAttribute('name', 'nomor_induk_admin');
+        if (filterStatus) filterStatus.setAttribute('name', 'status_admin');
+        if (tabInput) tabInput.value = 'admin';
     }
-
-    // Reset filters when switching tabs
-    document.getElementById('search-nama').value = '';
-    document.getElementById('search-id').value = '';
-    document.getElementById('filter-kelas').value = 'All';
-    document.getElementById('filter-status').value = 'All';
-    applyFilters();
 }
 
 // --- Modal Logic ---
@@ -534,63 +567,8 @@ function validateEditForm() {
     return true;
 }
 
-// --- Filter Functionality ---
-
-function applyFilters() {
-    const searchNama = document.getElementById('search-nama').value.toLowerCase();
-    const searchId = document.getElementById('search-id').value.toLowerCase();
-    const filterKelas = document.getElementById('filter-kelas').value;
-    const filterStatus = document.getElementById('filter-status').value;
-
-    let cards;
-    if (currentTab === 'user') {
-        cards = document.querySelectorAll('.user-card');
-    } else {
-        cards = document.querySelectorAll('.admin-card');
-    }
-
-    cards.forEach(card => {
-        const nama = card.getAttribute('data-nama').toLowerCase();
-        const nomorInduk = card.getAttribute('data-nomor-induk').toLowerCase();
-        const prodi = card.getAttribute('data-prodi')?.toLowerCase() || '';
-        const status = card.getAttribute('data-status');
-
-        let showCard = true;
-
-        // Filter by nama
-        if (searchNama && !nama.includes(searchNama)) {
-            showCard = false;
-        }
-
-        // Filter by nomor induk
-        if (searchId && !nomorInduk.includes(searchId)) {
-            showCard = false;
-        }
-
-        // Filter by prodi (only for user tab)
-        if (currentTab === 'user' && filterKelas !== 'All' && prodi !== filterKelas.toLowerCase()) {
-            showCard = false;
-        }
-
-        // Filter by status
-        if (filterStatus !== 'All' && status !== filterStatus) {
-            showCard = false;
-        }
-
-        // Show or hide card
-        if (showCard) {
-            card.style.display = 'grid';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-
-// Attach filter listeners
-document.getElementById('search-nama').addEventListener('input', applyFilters);
-document.getElementById('search-id').addEventListener('input', applyFilters);
-document.getElementById('filter-kelas').addEventListener('change', applyFilters);
-document.getElementById('filter-status').addEventListener('change', applyFilters);
+// --- Filter Functionality (Now using server-side filtering via form submission) ---
+// Client-side filtering removed - filters now handled by server
 
 // --- Upload Foto Profil Modal ---
 function openUploadFotoModal(nomorInduk) {

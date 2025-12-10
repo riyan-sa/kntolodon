@@ -452,5 +452,178 @@ class AkunModel
         $stmt = $this->pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
+
+    /**
+     * Filter users dengan pagination dan search
+     */
+    public function filterUsers(array $filters = []): array
+    {
+        $sql = "SELECT nomor_induk, username, email, status, role, prodi, foto_profil, validasi_mahasiswa 
+                FROM akun 
+                WHERE role IN ('Mahasiswa', 'Dosen', 'Tenaga Pendidikan', 'User')";
+        $params = [];
+
+        // Filter by nama
+        if (!empty($filters['nama'])) {
+            $sql .= " AND username LIKE :nama";
+            $params[':nama'] = '%' . $filters['nama'] . '%';
+        }
+
+        // Filter by nomor_induk
+        if (!empty($filters['nomor_induk'])) {
+            $sql .= " AND nomor_induk LIKE :nomor_induk";
+            $params[':nomor_induk'] = '%' . $filters['nomor_induk'] . '%';
+        }
+
+        // Filter by prodi
+        if (!empty($filters['prodi'])) {
+            $sql .= " AND prodi = :prodi";
+            $params[':prodi'] = $filters['prodi'];
+        }
+
+        // Filter by status
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params[':status'] = $filters['status'];
+        }
+
+        $sql .= " ORDER BY username ASC";
+
+        // Pagination
+        if (isset($filters['limit'])) {
+            $sql .= " LIMIT :limit OFFSET :offset";
+            $params[':limit'] = (int)$filters['limit'];
+            $params[':offset'] = (int)($filters['offset'] ?? 0);
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        
+        // Bind parameters with proper types
+        foreach ($params as $key => $value) {
+            if ($key === ':limit' || $key === ':offset') {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Count filtered users (tanpa limit/offset)
+     */
+    public function countFilteredUsers(array $filters = []): int
+    {
+        $sql = "SELECT COUNT(*) FROM akun 
+                WHERE role IN ('Mahasiswa', 'Dosen', 'Tenaga Pendidikan', 'User')";
+        $params = [];
+
+        if (!empty($filters['nama'])) {
+            $sql .= " AND username LIKE :nama";
+            $params[':nama'] = '%' . $filters['nama'] . '%';
+        }
+
+        if (!empty($filters['nomor_induk'])) {
+            $sql .= " AND nomor_induk LIKE :nomor_induk";
+            $params[':nomor_induk'] = '%' . $filters['nomor_induk'] . '%';
+        }
+
+        if (!empty($filters['prodi'])) {
+            $sql .= " AND prodi = :prodi";
+            $params[':prodi'] = $filters['prodi'];
+        }
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params[':status'] = $filters['status'];
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Filter admins dengan pagination dan search
+     */
+    public function filterAdmins(array $filters = []): array
+    {
+        $sql = "SELECT nomor_induk, username, email, status, role, foto_profil 
+                FROM akun 
+                WHERE role IN ('Admin', 'Super Admin')";
+        $params = [];
+
+        // Filter by nama
+        if (!empty($filters['nama'])) {
+            $sql .= " AND username LIKE :nama";
+            $params[':nama'] = '%' . $filters['nama'] . '%';
+        }
+
+        // Filter by nomor_induk
+        if (!empty($filters['nomor_induk'])) {
+            $sql .= " AND nomor_induk LIKE :nomor_induk";
+            $params[':nomor_induk'] = '%' . $filters['nomor_induk'] . '%';
+        }
+
+        // Filter by status
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params[':status'] = $filters['status'];
+        }
+
+        $sql .= " ORDER BY username ASC";
+
+        // Pagination
+        if (isset($filters['limit'])) {
+            $sql .= " LIMIT :limit OFFSET :offset";
+            $params[':limit'] = (int)$filters['limit'];
+            $params[':offset'] = (int)($filters['offset'] ?? 0);
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        
+        // Bind parameters with proper types
+        foreach ($params as $key => $value) {
+            if ($key === ':limit' || $key === ':offset') {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value);
+            }
+        }
+        
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Count filtered admins (tanpa limit/offset)
+     */
+    public function countFilteredAdmins(array $filters = []): int
+    {
+        $sql = "SELECT COUNT(*) FROM akun 
+                WHERE role IN ('Admin', 'Super Admin')";
+        $params = [];
+
+        if (!empty($filters['nama'])) {
+            $sql .= " AND username LIKE :nama";
+            $params[':nama'] = '%' . $filters['nama'] . '%';
+        }
+
+        if (!empty($filters['nomor_induk'])) {
+            $sql .= " AND nomor_induk LIKE :nomor_induk";
+            $params[':nomor_induk'] = '%' . $filters['nomor_induk'] . '%';
+        }
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params[':status'] = $filters['status'];
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
 }
 

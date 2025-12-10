@@ -399,11 +399,70 @@ class AdminController
 
     public function member_list(): void
     {
-        // ========== FETCH DATA FROM DATABASE ==========
         $akunModel = new AkunModel();
-        $userData = $akunModel->getUsersWithProdi();
-        $adminData = $akunModel->getAdminsWithDetails();
+        
+        // ========== PAGINATION SETUP FOR USER TAB ==========
+        $perPageUser = 10;
+        $currentPageUser = isset($_GET['pg_user']) ? max(1, (int)$_GET['pg_user']) : 1;
+        $offsetUser = ($currentPageUser - 1) * $perPageUser;
+        
+        // User filters
+        $userFilters = [
+            'nama' => $_GET['nama'] ?? '',
+            'nomor_induk' => $_GET['nomor_induk'] ?? '',
+            'prodi' => $_GET['prodi'] ?? '',
+            'status' => $_GET['status'] ?? '',
+            'limit' => $perPageUser,
+            'offset' => $offsetUser
+        ];
+        
+        // Fetch user data dengan pagination
+        $userData = $akunModel->filterUsers($userFilters);
+        
+        // Count total users untuk pagination
+        $countUserFilters = array_diff_key($userFilters, ['limit' => '', 'offset' => '']);
+        $totalUsers = $akunModel->countFilteredUsers($countUserFilters);
+        $totalPagesUser = ceil($totalUsers / $perPageUser);
+        
+        // ========== PAGINATION SETUP FOR ADMIN TAB ==========
+        $perPageAdmin = 10;
+        $currentPageAdmin = isset($_GET['pg_admin']) ? max(1, (int)$_GET['pg_admin']) : 1;
+        $offsetAdmin = ($currentPageAdmin - 1) * $perPageAdmin;
+        
+        // Admin filters
+        $adminFilters = [
+            'nama' => $_GET['nama_admin'] ?? '',
+            'nomor_induk' => $_GET['nomor_induk_admin'] ?? '',
+            'status' => $_GET['status_admin'] ?? '',
+            'limit' => $perPageAdmin,
+            'offset' => $offsetAdmin
+        ];
+        
+        // Fetch admin data dengan pagination
+        $adminData = $akunModel->filterAdmins($adminFilters);
+        
+        // Count total admins untuk pagination
+        $countAdminFilters = array_diff_key($adminFilters, ['limit' => '', 'offset' => '']);
+        $totalAdmins = $akunModel->countFilteredAdmins($countAdminFilters);
+        $totalPagesAdmin = ceil($totalAdmins / $perPageAdmin);
+        
+        // Fetch prodi list untuk dropdown
         $prodiList = $akunModel->getAllProdi();
+        
+        // Pagination data untuk view
+        $paginationUser = [
+            'currentPage' => $currentPageUser,
+            'totalPages' => $totalPagesUser,
+            'totalRecords' => $totalUsers,
+            'perPage' => $perPageUser
+        ];
+        
+        $paginationAdmin = [
+            'currentPage' => $currentPageAdmin,
+            'totalPages' => $totalPagesAdmin,
+            'totalRecords' => $totalAdmins,
+            'perPage' => $perPageAdmin
+        ];
 
         require __DIR__ . '/../view/admin/member_list.php';
     }
