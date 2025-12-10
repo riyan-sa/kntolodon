@@ -1,5 +1,15 @@
 // booking-list.js - Admin Booking List dengan Modal Check-in
 
+// ==================== DATA INITIALIZATION ====================
+
+// Initialize global variables from data attributes
+document.addEventListener('DOMContentLoaded', function() {
+    const dataContainer = document.getElementById('booking-list-data');
+    if (dataContainer) {
+        window.ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+    }
+});
+
 // State
 let currentBookingId = null;
 let currentBookingData = null;

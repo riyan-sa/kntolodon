@@ -293,10 +293,8 @@ require __DIR__ . '/components/head.php';
         <?php endif; ?>
     </main>
 
-    <script>
-        // Expose asset base path to external scripts
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-    </script>
+    <!-- Data akan di-inject melalui data attributes -->
+    <div id="dashboard-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('assets/js/dashboard.js'); ?>" defer></script>
     <script src="<?= $asset('assets/js/auth.js'); ?>" defer></script>
 

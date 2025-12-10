@@ -63,10 +63,10 @@ $defaultImage = $asset('/assets/image/room.png');
                         </div>
 
                         <div class="mt-4 space-y-2">
-                            <button onclick="openEditModal(<?= $room['id_ruangan'] ?>)" class="block w-full py-2 bg-white hover:bg-gray-300 rounded text-center text-sky-500 font-semibold text-sm hover:text-sky-600 border border-sky-500 transition-colors">
+                            <button data-action="edit" data-room-id="<?= $room['id_ruangan'] ?>" class="btn-edit-room block w-full py-2 bg-white hover:bg-gray-300 rounded text-center text-sky-500 font-semibold text-sm hover:text-sky-600 border border-sky-500 transition-colors">
                                 Update
                             </button>
-                            <button onclick="openDeleteModal(<?= $room['id_ruangan'] ?>)" class="w-full bg-red-700 hover:bg-red-800 text-white text-sm font-bold py-2 rounded shadow-sm transition-colors">
+                            <button data-action="delete" data-room-id="<?= $room['id_ruangan'] ?>" class="btn-delete-room w-full bg-red-700 hover:bg-red-800 text-white text-sm font-bold py-2 rounded shadow-sm transition-colors">
                                 Delete
                             </button>
                         </div>
@@ -78,7 +78,7 @@ $defaultImage = $asset('/assets/image/room.png');
 
         <!-- Tombol Tambah Ruangan -->
         <div class="mt-10 flex justify-center">
-            <button onclick="openAddModal()" class="relative group w-full max-w-lg h-40 rounded-xl overflow-hidden shadow-lg border-2 border-sky-500 cursor-pointer block">
+            <button id="btn-add-room" class="relative group w-full max-w-lg h-40 rounded-xl overflow-hidden shadow-lg border-2 border-sky-500 cursor-pointer block">
                 <img src="<?= $defaultImage ?>"
                     alt="Tambah Ruangan"
                     class="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:scale-105">
@@ -100,7 +100,7 @@ $defaultImage = $asset('/assets/image/room.png');
         <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-slate-200 flex justify-between items-center">
                 <h2 class="text-2xl font-bold text-slate-800">Tambah Ruangan Baru</h2>
-                <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600">
+                <button class="btn-close-add-modal text-slate-400 hover:text-slate-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -184,7 +184,7 @@ $defaultImage = $asset('/assets/image/room.png');
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Foto Ruangan</label>
                         <input type="file" name="foto_ruangan" accept="image/jpeg,image/png,image/webp,image/jpg" 
-                            onchange="previewImage(event, 'addPreview')"
+                            data-preview-target="addPreview" class="input-file-add"
                             class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                         <p class="text-xs text-slate-500 mt-1">Format: JPEG, PNG, WEBP (Max 5MB)</p>
                         <div id="addPreview" class="mt-3 hidden">
@@ -194,8 +194,7 @@ $defaultImage = $asset('/assets/image/room.png');
                 </div>
 
                 <div class="mt-6 flex gap-3 justify-end">
-                    <button type="button" onclick="closeAddModal()" 
-                        class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
+                    <button type="button" class="btn-close-add-modal px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
                         Batal
                     </button>
                     <button type="submit" 
@@ -212,7 +211,7 @@ $defaultImage = $asset('/assets/image/room.png');
         <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-slate-200 flex justify-between items-center">
                 <h2 class="text-2xl font-bold text-slate-800">Edit Ruangan</h2>
-                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600">
+                <button class="btn-close-edit-modal text-slate-400 hover:text-slate-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -299,7 +298,7 @@ $defaultImage = $asset('/assets/image/room.png');
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Ganti Foto Ruangan</label>
                         <input type="file" name="foto_ruangan" accept="image/jpeg,image/png,image/webp,image/jpg" 
-                            onchange="previewImage(event, 'editPreview')"
+                            data-preview-target="editPreview" class="input-file-edit"
                             class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                         <p class="text-xs text-slate-500 mt-1">Format: JPEG, PNG, WEBP (Max 5MB). Kosongkan jika tidak ingin mengganti foto.</p>
                         <div id="editPreview" class="mt-3 hidden">
@@ -309,8 +308,7 @@ $defaultImage = $asset('/assets/image/room.png');
                 </div>
 
                 <div class="mt-6 flex gap-3 justify-end">
-                    <button type="button" onclick="closeEditModal()" 
-                        class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
+                    <button type="button" class="btn-close-edit-modal px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
                         Batal
                     </button>
                     <button type="submit" 
@@ -341,8 +339,7 @@ $defaultImage = $asset('/assets/image/room.png');
                     <input type="hidden" name="id_ruangan" id="delete_id_ruangan">
                     
                     <div class="flex gap-3">
-                        <button type="button" onclick="closeDeleteModal()" 
-                            class="flex-1 px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
+                        <button type="button" class="btn-close-delete-modal flex-1 px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">
                             Batal
                         </button>
                         <button type="submit" 
@@ -355,11 +352,8 @@ $defaultImage = $asset('/assets/image/room.png');
         </div>
     </div>
 
-    <script>
-        // Expose asset base path and room data to external scripts
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-        window.ROOMS_DATA = <?= json_encode($rooms) ?>;
-    </script>
+    <!-- Data will be injected by JS from data attributes -->
+    <div id="rooms-data" data-rooms='<?= json_encode($rooms) ?>' data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('assets/js/kelola-ruangan.js') ?>" defer></script>
 
 </body>

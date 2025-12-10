@@ -467,6 +467,60 @@ class AdminController
         require __DIR__ . '/../view/admin/member_list.php';
     }
 
+    /**
+     * AJAX endpoint untuk load member data (user atau admin)
+     */
+    public function load_members(): void
+    {
+        header('Content-Type: application/json');
+        
+        $tab = $_GET['tab'] ?? 'user';
+        $page = isset($_GET['page_num']) ? max(1, (int)$_GET['page_num']) : 1;
+        $perPage = 10;
+        $offset = ($page - 1) * $perPage;
+        
+        $akunModel = new AkunModel();
+        
+        if ($tab === 'user') {
+            $filters = [
+                'nama' => $_GET['nama'] ?? '',
+                'nomor_induk' => $_GET['nomor_induk'] ?? '',
+                'prodi' => $_GET['prodi'] ?? '',
+                'status' => $_GET['status'] ?? '',
+                'limit' => $perPage,
+                'offset' => $offset
+            ];
+            
+            $data = $akunModel->filterUsers($filters);
+            $countFilters = array_diff_key($filters, ['limit' => '', 'offset' => '']);
+            $total = $akunModel->countFilteredUsers($countFilters);
+        } else {
+            $filters = [
+                'nama' => $_GET['nama_admin'] ?? '',
+                'nomor_induk' => $_GET['nomor_induk_admin'] ?? '',
+                'status' => $_GET['status_admin'] ?? '',
+                'limit' => $perPage,
+                'offset' => $offset
+            ];
+            
+            $data = $akunModel->filterAdmins($filters);
+            $countFilters = array_diff_key($filters, ['limit' => '', 'offset' => '']);
+            $total = $akunModel->countFilteredAdmins($countFilters);
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $data,
+            'pagination' => [
+                'currentPage' => $page,
+                'totalPages' => ceil($total / $perPage),
+                'totalRecords' => $total,
+                'perPage' => $perPage
+            ]
+        ]);
+        exit;
+    }
+
     public function booking_external(): void
     {
         // Only Super Admin can access

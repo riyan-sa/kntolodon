@@ -586,9 +586,8 @@ require __DIR__ . '/../components/head.php';
     
     <?php if (isset($_SESSION['user']) && in_array($_SESSION['user']['role'], ['Admin', 'Super Admin'])): ?>
     <link rel="stylesheet" href="<?= $asset('assets/css/admin-dashboard.css') ?>">
-    <script>
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-    </script>
+    <!-- Data akan di-inject melalui data attributes -->
+    <div id="profile-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('/assets/js/admin.js') ?>" defer></script>
     <?php endif; ?>
 </body>

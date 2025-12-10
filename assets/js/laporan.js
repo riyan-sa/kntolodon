@@ -1,9 +1,19 @@
 /**
  * Laporan.js - Handle tab switching, filters, dan download untuk halaman laporan
- * Menggunakan window.ASSET_BASE_PATH yang di-expose dari view
+ * NO inline scripts - all event handlers use event delegation
  */
 
+// Initialize data from data attributes
+let ASSET_BASE_PATH = '';
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Get base path from data attribute  
+    const dataContainer = document.getElementById('laporan-data');
+    if (dataContainer) {
+        ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+        window.ASSET_BASE_PATH = ASSET_BASE_PATH;
+    }
+    
     initLaporanPage();
 });
 
@@ -21,20 +31,24 @@ function initLaporanPage() {
     // Setup event listeners untuk filter inputs
     setupFilterListeners();
     
-    // Setup event listeners untuk tab buttons
-    document.querySelectorAll('[data-laporan-tab]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tabName = this.getAttribute('data-tab-name');
+    // Setup event delegation for all tab buttons (with onclick attributes)
+    // This allows existing onclick to work OR data attributes
+    document.addEventListener('click', function(event) {
+        // Tab switching buttons
+        if (event.target.closest('[data-laporan-tab]')) {
+            const btn = event.target.closest('[data-laporan-tab]');
+            const tabName = btn.getAttribute('data-tab-name');
             gantiTabLaporan(tabName);
-        });
-    });
-    
-    // Setup event listeners untuk download buttons
-    document.querySelectorAll('[data-download-laporan]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const periode = this.getAttribute('data-periode');
+            event.preventDefault();
+        }
+        
+        // Download buttons
+        if (event.target.closest('[data-download-laporan]')) {
+            const btn = event.target.closest('[data-download-laporan]');
+            const periode = btn.getAttribute('data-periode');
             downloadLaporan(periode);
-        });
+            event.preventDefault();
+        }
     });
 }
 

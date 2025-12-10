@@ -4,6 +4,80 @@
  * Handle modal toggle, form validation, dan image preview (tanpa AJAX)
  */
 
+// ==================== DATA INITIALIZATION ====================
+
+// Initialize global variables from data attributes
+let ROOMS_DATA = [];
+let ASSET_BASE_PATH = '';
+
+// Load data when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const dataContainer = document.getElementById('rooms-data');
+    if (dataContainer) {
+        ROOMS_DATA = JSON.parse(dataContainer.dataset.rooms || '[]');
+        ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+        window.ROOMS_DATA = ROOMS_DATA;
+        window.ASSET_BASE_PATH = ASSET_BASE_PATH;
+    }
+    
+    initializeEventListeners();
+});
+
+// ==================== EVENT LISTENERS ====================
+
+function initializeEventListeners() {
+    // Button: Add Room
+    const btnAddRoom = document.getElementById('btn-add-room');
+    if (btnAddRoom) {
+        btnAddRoom.addEventListener('click', openAddModal);
+    }
+    
+    // Buttons: Edit Room (event delegation)
+    document.addEventListener('click', function(event) {
+        const editBtn = event.target.closest('.btn-edit-room');
+        if (editBtn) {
+            const roomId = editBtn.dataset.roomId;
+            openEditModal(roomId);
+        }
+        
+        const deleteBtn = event.target.closest('.btn-delete-room');
+        if (deleteBtn) {
+            const roomId = deleteBtn.dataset.roomId;
+            openDeleteModal(roomId);
+        }
+    });
+    
+    // Buttons: Close modals
+    const closeAddBtns = document.querySelectorAll('.btn-close-add-modal');
+    closeAddBtns.forEach(btn => btn.addEventListener('click', closeAddModal));
+    
+    const closeEditBtns = document.querySelectorAll('.btn-close-edit-modal');
+    closeEditBtns.forEach(btn => btn.addEventListener('click', closeEditModal));
+    
+    const closeDeleteBtns = document.querySelectorAll('.btn-close-delete-modal');
+    closeDeleteBtns.forEach(btn => btn.addEventListener('click', closeDeleteModal));
+    
+    // File inputs for preview
+    const fileInputAdd = document.querySelector('.input-file-add');
+    if (fileInputAdd) {
+        fileInputAdd.addEventListener('change', function(event) {
+            const previewTarget = event.target.dataset.previewTarget;
+            previewImage(event, previewTarget);
+        });
+    }
+    
+    const fileInputEdit = document.querySelector('.input-file-edit');
+    if (fileInputEdit) {
+        fileInputEdit.addEventListener('change', function(event) {
+            const previewTarget = event.target.dataset.previewTarget;
+            previewImage(event, previewTarget);
+        });
+    }
+    
+    // Form validation
+    setupFormValidation();
+}
+
 // ==================== MODAL MANAGEMENT ====================
 
 /**
@@ -189,8 +263,7 @@ document.addEventListener('keydown', function(event) {
 
 // ==================== FORM VALIDATION ====================
 
-// Add form validation before submit
-document.addEventListener('DOMContentLoaded', function() {
+function setupFormValidation() {
     // Validate Add Form
     const addForm = document.querySelector('#addModal form');
     if (addForm) {
@@ -220,4 +293,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
+}

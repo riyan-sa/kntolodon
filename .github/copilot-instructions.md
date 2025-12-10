@@ -309,6 +309,96 @@ Controllers use typed properties (`private FeatureModel $model;`) and return typ
   - This keeps the main codebase clean and prevents accidental commits of debug code
   - Never create debug files in controller/, model/, or view/ directories
 
+## Test Scripts (`temp/test_*.php`)
+**Purpose:** Isolated testing of specific features without running full application
+
+**Common test scripts:**
+- `test_email.php` — Test SMTP connection and email sending (includes Gmail App Password troubleshooting)
+- `test_email_cli.php` — CLI version for terminal testing
+- `test_validasi_email_pnj.php` — Validate PNJ domain email patterns (mahasiswa vs dosen/admin)
+- `test_login_email.php` — Test authentication with email-based login
+- `test_foto_path_debug.php` — Debug foto_profil path issues and file existence
+- `test_checkin_status.php` — Verify check-in logic and anggota_booking relationships
+- `test_laporan_most_booked.php` — Test booking statistics and reporting queries
+- `test_validasi_waktu_masa_lalu.php` — Validate date/time business rules
+
+**Usage pattern:**
+```php
+// Typical test script structure
+require_once __DIR__ . '/../config/Koneksi.php';
+$pdo = Koneksi::getConnection();
+
+// Test specific functionality
+// Output results with var_dump() or echo
+// Include visual feedback (HTML tables, success/error messages)
+```
+
+**When to create test scripts:**
+- Complex validation logic needs verification
+- External service integration (SMTP, file uploads)
+- Database query optimization
+- Email domain validation patterns
+- Path resolution issues
+
+## Database Migrations
+**Location:** `temp/MIGRATION_*.sql` files document schema changes
+
+**Migration pattern:**
+```sql
+-- Migration: Feature Name
+-- Created: YYYY-MM-DD
+-- Purpose: Why this change is needed
+
+USE `pbl-perpustakaan`;
+
+-- Create tables with IF NOT EXISTS
+CREATE TABLE IF NOT EXISTS `new_table` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  -- columns with COMMENT for documentation
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Insert default/seed data
+INSERT INTO `new_table` (...) VALUES (...);
+```
+
+**Key principles:**
+- Use `IF NOT EXISTS` to make migrations idempotent
+- Document EVERY column with COMMENT
+- Include purpose and creation date in header
+- Add sample/seed data for new tables
+- Foreign keys with CASCADE/RESTRICT behavior
+- Reference `created_by`/`updated_by` to `akun.nomor_induk`
+
+**Examples:**
+- `MIGRATION_PENGATURAN_SISTEM.sql` — Added `waktu_operasi` and `hari_libur` tables
+- `MIGRATION_INVITATION_CONFIRM.sql` — Added invitation confirmation workflow
+
+**Execution:**
+```powershell
+# Via MySQL CLI
+mysql -u root -p PBL-Perpustakaan < temp/MIGRATION_FEATURE_NAME.sql
+
+# Or via phpMyAdmin
+# Import → Choose file → Go
+```
+
+## Email Configuration
+**CRITICAL:** Email sending requires proper SMTP configuration in XAMPP. See `temp/SETUP_EMAIL_COMPLETE.md` for comprehensive guide.
+
+**Quick troubleshooting:**
+- Error "Username and Password not accepted" → App Password expired, generate new one
+- Wrong sender email → Check `force_sender` in `C:\xampp\sendmail\sendmail.ini`
+- Email not sending → Verify Apache restart after config changes
+
+**Configuration hierarchy (highest to lowest priority):**
+1. `sendmail.ini` → `force_sender` (overrides ALL From: headers)
+2. PHP code → `From:` header (from constants)
+3. `php.ini` → `sendmail_from` (fallback)
+4. `sendmail.ini` → `auth_username` (SMTP auth)
+
+**Current sender:** `bookez.web@gmail.com` (configured in `config/Email.php`)
+
 ## Code Structure & Best Practices
 
 ### Controller-Model Pattern
@@ -377,17 +467,46 @@ public function create(array $data): int|false {
   - Current legacy AJAX endpoints: `BookingController::get_user_by_nim()`, `BookingController::get_booked_timeslots()`
   - When maintaining legacy AJAX, keep pattern but refactor new features to avoid it
 
-**Pattern for page-specific JS:**
+**Pattern for page-specific JS (UPDATED - NO inline scripts):**
 1. Create `assets/js/{page-name}.js` for page-specific behavior (e.g., `dashboard.js`, `booking.js`)
 2. Use `assets/js/main.js` ONLY for truly global functionality needed across all pages
-3. Reference external scripts at end of view before `</body>`:
+3. **Pass data via hidden div with data attributes (NOT inline script blocks):**
    ```php
-   <script>
-       // Expose asset base path to external scripts
-       window.ASSET_BASE_PATH = '<?= $basePath ?>';
-   </script>
+   <!-- In view file before closing </body> -->
+   <div id="feature-data" 
+        data-base-path="<?= $basePath ?>" 
+        data-user-role="<?= $_SESSION['user']['role'] ?? '' ?>"
+        data-rooms='<?= json_encode($rooms ?? []) ?>' 
+        style="display:none;">
+   </div>
    <script src="<?= $asset('assets/js/page-name.js'); ?>" defer></script>
    ```
+4. **Initialize data in external JS file:**
+   ```javascript
+   // In assets/js/page-name.js
+   document.addEventListener('DOMContentLoaded', function() {
+       const dataContainer = document.getElementById('feature-data');
+       if (dataContainer) {
+           window.ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+           window.USER_ROLE = dataContainer.dataset.userRole || '';
+           window.ROOMS_DATA = JSON.parse(dataContainer.dataset.rooms || '[]');
+       }
+       initFeature();
+   });
+   ```
+
+**Event delegation pattern (NO onclick attributes):**
+```javascript
+// WRONG: <button onclick="openModal()">
+// RIGHT: Use event delegation in external JS
+document.addEventListener('click', function(event) {
+    const btn = event.target.closest('[data-action="open-modal"]');
+    if (btn) {
+        const modalId = btn.dataset.modalId;
+        openModal(modalId);
+    }
+});
+```
 
 **Accessing asset paths in JS:**
 ```javascript
@@ -400,22 +519,65 @@ const logoUrl = window.ASSET_BASE_PATH + '/assets/image/logo.png';
 - When refactoring, replace with traditional form submissions
 - Only keep AJAX for real-time features that absolutely require it
 
+**Data Attributes Pattern (Standard across all pages):**
+```php
+<!-- View: Pass data via hidden container -->
+<div id="page-data" 
+     data-base-path="<?= $basePath ?>"
+     data-user-role="<?= $_SESSION['user']['role'] ?? '' ?>"
+     data-json='<?= json_encode($data ?? []) ?>'
+     style="display:none;">
+</div>
+
+<!-- View: Use data attributes instead of onclick -->
+<button data-action="edit" data-room-id="<?= $room['id'] ?>" class="btn-edit">Edit</button>
+<button data-action="delete" data-room-id="<?= $room['id'] ?>" class="btn-delete">Delete</button>
+```
+
+```javascript
+// JS: Initialize from data attributes (NOT inline window.* assignments)
+document.addEventListener('DOMContentLoaded', function() {
+    const dataContainer = document.getElementById('page-data');
+    if (dataContainer) {
+        window.ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+        window.USER_ROLE = dataContainer.dataset.userRole || '';
+        window.DATA = JSON.parse(dataContainer.dataset.json || '[]');
+    }
+    initPage();
+});
+
+// JS: Event delegation (NOT onclick attributes)
+document.addEventListener('click', function(event) {
+    const editBtn = event.target.closest('[data-action="edit"]');
+    if (editBtn) {
+        const roomId = editBtn.dataset.roomId;
+        openEditModal(roomId);
+    }
+    
+    const deleteBtn = event.target.closest('[data-action="delete"]');
+    if (deleteBtn) {
+        const roomId = deleteBtn.dataset.roomId;
+        openDeleteModal(roomId);
+    }
+});
+```
+
 **Existing JS modules:**
 - `auth.js` — logout handling (listens for `#btn-logout`)
 - `captcha.js` — CAPTCHA refresh with cache-busting
 - `booking.js` — booking form interactions, anggota management, timeline conflict detection
-- `booking-list.js` — admin booking list with modal check-in functionality
+- `booking-list.js` — admin booking list with modal check-in functionality (uses data attributes)
 - `profile.js` — profile page tab switching + foto profil upload modal with preview
-- `dashboard.js` — user dashboard (booking flow + room modals)
-- `admin.js` — admin dashboard card zoom effects + booking external tab switching
-- `member-list.js` — admin member management (tab switching, modals for view/edit/add/delete with password validation)
+- `dashboard.js` — user dashboard (booking flow + room modals, uses data attributes)
+- `admin.js` — admin dashboard card zoom effects + booking external tab switching (uses data attributes)
+- `member-list.js` — admin member management (tab switching, modals, uses data attributes for USER_ROLE)
 - `feedback.js` — feedback form rating selection and validation
 - `startpage.js` — landing page interactions
 - `regis.js` — registration form handling (enforces 8-character minimum password)
 - `reset-password.js` — password reset functionality
 - `pengaturan.js` — system settings tab switching + modal handling (Super Admin only)
-- `kelola-ruangan.js` — room management modals and interactions
-- `laporan.js` — admin reports filtering and export
+- `kelola-ruangan.js` — room management modals (uses data attributes + event delegation)
+- `laporan.js` — admin reports filtering (uses data attributes for tab switching)
 - `skrip_sebelum_dashboard.js` — pre-dashboard scripts
 - `main.js` — (reserved for global functionality)
 
@@ -464,12 +626,22 @@ const logoUrl = window.ASSET_BASE_PATH + '/assets/image/logo.png';
 - JavaScript: `assets/js/admin.js` handles form toggle and tab switching
 
 **Member Management:** `view/admin/member_list.php` + `assets/js/member-list.js`:
-- Tab switching between User/Admin lists
+- **CRITICAL PATTERNS:**
+  - **Pagination Persistence:** Tab switching preserves pagination via URL parameters (`pg_user`, `pg_admin`)
+    - State tracked in JS: `currentPageUser`, `currentPageAdmin` 
+    - `switchTab()` updates URL with `window.location.href` (full page reload, not AJAX)
+    - `initializeActiveTab()` reads URL params to restore pagination state
+  - **Dynamic Table Headers:** `updateTableHeader(tab)` adjusts col-span based on active tab
+    - User: 6 columns (Profil(1) | Nama(3) | Nomor Induk(2) | Prodi(2) | Validasi(2) | Status(2))
+    - Admin: 4 columns (Profil(3) | Nama(4) | NIP(3) | Status(2))
+    - Header elements have IDs (`header-profil`, `header-nama`, etc.) for dynamic updates
+  - **Server-side Rendering First:** Initial load shows PHP-rendered data, JavaScript only for tab switching
+- Tab switching between User/Admin lists with proper URL state management
 - FAB (Floating Action Button) for adding admins (hidden on User tab, visible on Admin tab)
 - Modal system with 4 modes: `'view'`, `'edit'`, `'add'`, `'delete_confirm'`
 - All icons are inline SVG (no external libraries)
-- Password validation: minimum 8 characters (following project security policy), email regex check
-- Add admin form fields: Nama, NIP, Email, Password
+- Password validation: minimum 8 characters, email domain validation for PNJ
+- AJAX endpoint: `admin&action=load_members&tab={user|admin}&page_num={n}` returns JSON with pagination
 
 ## Database Schema Quick Reference
 **Key tables and relationships:**
@@ -637,6 +809,58 @@ public function some_booking_related_action(): void {
 }
 ```
 
+## Pagination Pattern
+**Reusable component:** `view/components/pagination.php` provides consistent pagination UI across all list views.
+
+**Implementation pattern (see `AdminController::booking_external()` or `ProfileController::renderIndexView()`):**
+```php
+// 1. Setup pagination parameters
+$perPage = 10;  // Records per page
+$currentPage = isset($_GET['pg']) ? max(1, (int)$_GET['pg']) : 1;
+$offset = ($currentPage - 1) * $perPage;
+
+// 2. Add to model filter
+$filters = [
+    'nama_ruangan' => $_GET['ruang'] ?? '',
+    'limit' => $perPage,
+    'offset' => $offset
+];
+
+// 3. Fetch paginated data
+$records = $model->filter($filters);
+$totalRecords = $model->countFiltered($countFilters);
+$totalPages = ceil($totalRecords / $perPage);
+
+// 4. Pass to view
+$paginationData = [
+    'currentPage' => $currentPage,
+    'totalPages' => $totalPages,
+    'totalRecords' => $totalRecords,
+    'perPage' => $perPage
+];
+```
+
+**View implementation:** Inline pagination UI (not using component include pattern):
+```php
+<?php if (isset($paginationData) && $paginationData['totalPages'] > 1): ?>
+    <!-- Pagination controls with filter preservation -->
+    <a href="?page=admin&action=booking_external&pg=<?= $currentPage - 1 ?>&ruang=<?= $_GET['ruang'] ?? '' ?>">Prev</a>
+<?php endif; ?>
+```
+
+**Key principles:**
+- Use `pg` parameter for page number (not `page` to avoid conflict with routing)
+- Always preserve filters in pagination URLs
+- Model must implement both `filter()` and `countFiltered()` methods
+- Pagination auto-hides when `totalPages <= 1`
+- Standard: 10 records per page for admin lists, 6 for user history
+
+**Multi-tab pagination (see `member_list.php`):**
+- Use separate parameters: `pg_user`, `pg_admin` for independent pagination state
+- Persist in URL when switching tabs: `window.location.href = url.toString();`
+- JavaScript tracks: `currentPageUser`, `currentPageAdmin` variables
+- `switchTab()` preserves pagination by reading from state variables and updating URL
+
 ## Critical Anti-Patterns to Avoid
 **Missing `break;` in switch statement:** Will cause default fallthrough to home page!
 ```php
@@ -651,9 +875,22 @@ switch ($halaman) {
 
 **Using AJAX unnecessarily:** AVOID fetch()/XMLHttpRequest in new code. Use traditional form submissions with POST/GET and server-side redirects instead. Only use AJAX for real-time features that absolutely require it.
 
+**Pagination without URL state:** When implementing pagination with tab switching:
+- ❌ WRONG: Use only JavaScript state (resets on page reload/navigation)
+- ✅ CORRECT: Persist state in URL parameters (`pg_user`, `pg_admin`)
+- Pattern: `switchTab()` → update URL with `window.location.href` → server renders correct page
+- See `member-list.js` and `temp/BUGFIX_PAGINATION_PERSISTENCE.md` for reference
+
 **Role logic violations:** Admin/Super Admin should NEVER be able to create bookings. Users should NEVER access admin features. Always validate role in both controller and view.
 
 **Inline JavaScript or CSS:** NEVER write inline `<script>` or `<style>` blocks in views. Always use external files in `assets/js/` or `assets/css/`.
+
+**Misaligned table headers/records:** When implementing dynamic tables with different column structures per tab:
+- ❌ WRONG: Static header with varying record col-spans (causes misalignment)
+- ✅ CORRECT: Dynamic header with matching col-spans via JavaScript
+- Pattern: Add IDs to header elements, create `updateTableHeader(tab)` function to adjust col-span
+- Example: User tab shows 6 columns, Admin tab shows 4 columns (same 12-column grid)
+- See `member_list.php` header with IDs + `member-list.js` `updateTableHeader()` function
 
 **Direct PDO in views:** Views should never contain database queries. Always use models for data access.
 

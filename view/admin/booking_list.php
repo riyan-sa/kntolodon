@@ -238,10 +238,8 @@ $filterStatus = $_GET['status'] ?? 'all';
         </div>
     </div>
 
-    <script>
-        // Expose asset base path to external scripts
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-    </script>
+    <!-- Data akan di-inject melalui data attributes -->
+    <div id="booking-list-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('assets/js/booking-list.js') ?>" defer></script>
 
 </body>

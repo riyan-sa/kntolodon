@@ -79,10 +79,8 @@ if (session_status() === PHP_SESSION_NONE) {
     <!-- Include Reset Password Modal Component -->
     <?php require __DIR__ . '/components/modal_reset_password.php'; ?>
 
-    <script>
-        // Expose asset base path to external scripts
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-    </script>
+    <!-- Data akan di-inject melalui data attributes -->
+    <div id="login-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('assets/js/captcha.js') ?>" defer></script>
     <script src="<?= $asset('assets/js/reset-password.js') ?>" defer></script>
 

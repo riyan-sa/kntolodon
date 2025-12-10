@@ -158,16 +158,16 @@ function formatDuration($minutes) {
                 <!-- Tab Navigation -->
                 <div class="border-b border-slate-200">
                     <div class="flex overflow-x-auto">
-                        <button onclick="gantiTabLaporan('harian')" id="btn-harian-2" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="harian" id="btn-harian-2" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Harian
                         </button>
-                        <button onclick="gantiTabLaporan('mingguan')" id="btn-mingguan-2" class="tab-btn active flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="mingguan" id="btn-mingguan-2" class="tab-btn active flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Mingguan
                         </button>
-                        <button onclick="gantiTabLaporan('bulanan')" id="btn-bulanan-2" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="bulanan" id="btn-bulanan-2" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Bulanan
                         </button>
-                        <button onclick="gantiTabLaporan('tahunan')" id="btn-tahunan-2" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="tahunan" id="btn-tahunan-2" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Tahunan
                         </button>
                     </div>
@@ -180,7 +180,7 @@ function formatDuration($minutes) {
                             <label class="font-bold text-slate-900 whitespace-nowrap">Pilih Tanggal:</label>
                             <input type="date" id="filter-tanggal-mingguan" value="<?= $tanggal ?>" class="border border-slate-300 rounded px-3 py-1.5 text-sm w-full md:w-48 focus:outline-none focus:border-sky-500">
                         </div>
-                        <button onclick="downloadLaporan('mingguan')" class="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold transition-colors">
+                        <button data-download-laporan data-periode="mingguan" class="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold transition-colors">
                             <span>Unduh</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -269,16 +269,16 @@ function formatDuration($minutes) {
                 <!-- Tab Navigation -->
                 <div class="border-b border-slate-200">
                     <div class="flex overflow-x-auto">
-                        <button onclick="gantiTabLaporan('harian')" id="btn-harian-3" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="harian" id="btn-harian-3" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Harian
                         </button>
-                        <button onclick="gantiTabLaporan('mingguan')" id="btn-mingguan-3" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="mingguan" id="btn-mingguan-3" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Mingguan
                         </button>
-                        <button onclick="gantiTabLaporan('bulanan')" id="btn-bulanan-3" class="tab-btn active flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="bulanan" id="btn-bulanan-3" class="tab-btn active flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Bulanan
                         </button>
-                        <button onclick="gantiTabLaporan('tahunan')" id="btn-tahunan-3" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="tahunan" id="btn-tahunan-3" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Tahunan
                         </button>
                     </div>
@@ -300,7 +300,7 @@ function formatDuration($minutes) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <button onclick="downloadLaporan('bulanan')" class="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold transition-colors">
+                        <button data-download-laporan data-periode="bulanan" class="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold transition-colors">
                             <span>Unduh</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -389,16 +389,16 @@ function formatDuration($minutes) {
                 <!-- Tab Navigation -->
                 <div class="border-b border-slate-200">
                     <div class="flex overflow-x-auto">
-                        <button onclick="gantiTabLaporan('harian')" id="btn-harian-4" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="harian" id="btn-harian-4" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Harian
                         </button>
-                        <button onclick="gantiTabLaporan('mingguan')" id="btn-mingguan-4" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="mingguan" id="btn-mingguan-4" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Mingguan
                         </button>
-                        <button onclick="gantiTabLaporan('bulanan')" id="btn-bulanan-4" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="bulanan" id="btn-bulanan-4" class="tab-btn flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Bulanan
                         </button>
-                        <button onclick="gantiTabLaporan('tahunan')" id="btn-tahunan-4" class="tab-btn active flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
+                        <button data-laporan-tab data-tab-name="tahunan" id="btn-tahunan-4" class="tab-btn active flex-1 px-8 py-4 text-sm font-medium text-slate-500 hover:text-sky-600 transition-colors border-b-2 border-transparent">
                             Tahunan
                         </button>
                     </div>
@@ -415,7 +415,7 @@ function formatDuration($minutes) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <button onclick="downloadLaporan('tahunan')" class="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold transition-colors">
+                        <button data-download-laporan data-periode="tahunan" class="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold transition-colors">
                             <span>Unduh</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -485,10 +485,8 @@ function formatDuration($minutes) {
 
     </main>
 
-    <script>
-        // Expose asset base path untuk external scripts
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-    </script>
+    <!-- Data akan di-inject melalui data attributes -->
+    <div id="laporan-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('assets/js/laporan.js') ?>" defer></script>
 </body>
 

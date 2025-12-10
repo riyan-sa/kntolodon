@@ -1,3 +1,49 @@
+// ==================== DATA INITIALIZATION ====================
+
+// Initialize global variables from data attributes
+document.addEventListener('DOMContentLoaded', function() {
+    const dataContainer = document.getElementById('booking-external-data') || document.getElementById('profile-data');
+    if (dataContainer) {
+        window.ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+    }
+    
+    initAdminPage();
+});
+
+function initAdminPage() {
+    // Setup event listeners for booking external form toggle
+    const bookingCard = document.getElementById('booking-card');
+    if (bookingCard) {
+        bookingCard.addEventListener('click', function() {
+            toggleForm(true);
+        });
+    }
+    
+    const btnKembali = document.querySelector('[data-toggle-form="false"]');
+    if (btnKembali) {
+        btnKembali.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleForm(false);
+        });
+    }
+    
+    // Setup tab switching buttons
+    const btnUpcoming = document.getElementById('btn-upcoming');
+    const btnHistory = document.getElementById('btn-history');
+    
+    if (btnUpcoming) {
+        btnUpcoming.addEventListener('click', function() {
+            switchTab('upcoming');
+        });
+    }
+    
+    if (btnHistory) {
+        btnHistory.addEventListener('click', function() {
+            switchTab('history');
+        });
+    }
+}
+
 //#region Tab Switching (booking external)
 // Fungsi untuk Mengganti Tab
 function switchTab(tabName) {

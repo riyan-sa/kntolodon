@@ -3,12 +3,24 @@
  * Handles booking finish flow, rating submission, and room description modals
  */
 
+// ==================== DATA INITIALIZATION ====================
+
+// Initialize global variables from data attributes
+document.addEventListener('DOMContentLoaded', function() {
+    const dataContainer = document.getElementById('dashboard-data');
+    if (dataContainer) {
+        window.ASSET_BASE_PATH = dataContainer.dataset.basePath || '';
+    }
+    
+    initDashboard();
+});
+
 // ========================================
 // BOOKING FINISH FLOW
 // ========================================
 
 // Handle tombol Selesai
-document.addEventListener('DOMContentLoaded', function() {
+function initDashboard() {
     const btnFinish = document.getElementById('btn-finish');
     const btnConfirmNo = document.getElementById('btn-confirm-no');
     const btnConfirmYes = document.getElementById('btn-confirm-yes');

@@ -33,7 +33,7 @@ $currentTab = $_GET['tab'] ?? 'upcoming';
 
             <!-- STATE 1: CARD TOMBOL BUAT BOOKING -->
             <div id="booking-card" class="block">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden relative group cursor-pointer" onclick="toggleForm(true)">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden relative group cursor-pointer">
                     <img src="<?= $asset('/assets/image/room.png') ?>" alt="Library" class="w-full h-48 object-cover opacity-90 group-hover:opacity-100 transition">
 
                     <!-- Overlay Button look -->
@@ -48,7 +48,7 @@ $currentTab = $_GET['tab'] ?? 'upcoming';
             <!-- STATE 2: FORM INPUT (Awalnya Hidden) -->
             <div id="booking-form" class="hidden bg-[#D9D9D9] rounded-lg p-5 shadow-inner">
                 <div class="flex justify-end mb-4">
-                    <button onclick="toggleForm(false)" class="text-sm font-bold text-gray-700 hover:text-black flex items-center gap-1">
+                    <button data-toggle-form="false" class="text-sm font-bold text-gray-700 hover:text-black flex items-center gap-1">
                         Kembali <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
@@ -322,10 +322,7 @@ $currentTab = $_GET['tab'] ?? 'upcoming';
     </main>
 
     <!-- JavaScript Logic -->
-    <script>
-        // Expose asset base path to external scripts
-        window.ASSET_BASE_PATH = '<?= $basePath ?>';
-    </script>
+    <div id="booking-external-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
     <script src="<?= $asset('assets/js/admin.js') ?>" defer></script>
 </body>
 
