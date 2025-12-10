@@ -1,4 +1,136 @@
 <?php
+/**
+ * ============================================================================
+ * LOGIN.PHP - Login Page View
+ * ============================================================================
+ * 
+ * Form login untuk autentikasi user menggunakan email dan password.
+ * Includes CAPTCHA verification untuk security.
+ * 
+ * FITUR:
+ * 1. EMAIL-BASED LOGIN
+ *    - Input: Email (format: nama@pnj.ac.id or subdomain.pnj.ac.id)
+ *    - CRITICAL: Login uses EMAIL (not username) for authentication
+ *    - Email validation: PNJ domain (@pnj.ac.id, @*.pnj.ac.id, @stu.pnj.ac.id)
+ * 
+ * 2. PASSWORD INPUT
+ *    - Type: password (hidden characters)
+ *    - Minimum: 8 characters (enforced during registration)
+ *    - No strength requirements on login (validated on register)
+ * 
+ * 3. CAPTCHA VERIFICATION
+ *    - Image: Dynamically generated via view/components/captcha.php
+ *    - Refresh: Click image or button to regenerate
+ *    - Validation: Case-insensitive comparison with session code
+ *    - JavaScript: assets/js/captcha.js handles refresh with cache-busting
+ * 
+ * 4. FORGOT PASSWORD
+ *    - Modal: Password reset flow (view/components/modal_reset_password.php)
+ *    - JavaScript: assets/js/reset-password.js
+ *    - Flow: Email → OTP → New Password (3 steps)
+ * 
+ * 5. REGISTER LINK
+ *    - Redirect: index.php?page=register
+ *    - Text: "Daftar akun, mudah" below submit button
+ * 
+ * FORM FIELDS:
+ * - email (type="email"): User email address (required)
+ * - password (type="password"): User password (required)
+ * - captcha (type="text"): CAPTCHA code (required, case-insensitive)
+ * 
+ * FORM SUBMISSION:
+ * - Action: index.php?page=login&action=auth
+ * - Method: POST
+ * - Controller: LoginController::auth()
+ * 
+ * VALIDATION (SERVER-SIDE):
+ * 1. Email format check (via filter_var)
+ * 2. PNJ domain validation (@pnj.ac.id or subdomains)
+ * 3. CAPTCHA comparison: strtolower($_POST['captcha']) === strtolower($_SESSION['code'])
+ * 4. Credentials check: AkunModel::loginByEmail($email, $password)
+ * 5. Status check: status must be 'Aktif' (not 'Tidak Aktif')
+ * 
+ * LOGIN FLOW:
+ * - Submit form → LoginController::auth()
+ * - Validate email format and PNJ domain
+ * - Validate CAPTCHA code
+ * - Check credentials in database
+ * - Check account status (must be 'Aktif')
+ * - Set session: $_SESSION['user'] with all user data
+ * - Redirect based on role:
+ *   * Admin/Super Admin → index.php?page=admin&action=index
+ *   * User → index.php?page=dashboard
+ * 
+ * ERROR HANDLING:
+ * - Invalid email format → alert + reload
+ * - Wrong CAPTCHA → alert + reload
+ * - Wrong credentials → alert + reload
+ * - Inactive account → alert + reload
+ * - All errors via JavaScript alert() from controller
+ * 
+ * SESSION DATA STRUCTURE:
+ * $_SESSION['user'] = [
+ *   'nomor_induk' => string (NIM/NIP),
+ *   'username' => string (display name),
+ *   'email' => string,
+ *   'role' => string ('User', 'Admin', 'Super Admin'),
+ *   'status' => string ('Aktif', 'Tidak Aktif'),
+ *   'jurusan' => string|null (mahasiswa only),
+ *   'prodi' => string|null (mahasiswa only),
+ *   'foto_profil' => string|null (path),
+ *   'validasi_mahasiswa' => string|null (screenshot KubacaPNJ)
+ * ];
+ * 
+ * TARGET ELEMENTS:
+ * - #email: Email input field
+ * - #password: Password input field
+ * - #captchaImage: CAPTCHA image element
+ * - #refresh-captcha: Refresh button
+ * - #forgot-password-link: Trigger password reset modal
+ * 
+ * JAVASCRIPT:
+ * - assets/js/captcha.js: CAPTCHA refresh functionality
+ * - assets/js/reset-password.js: Password reset flow
+ * 
+ * LAYOUT STRUCTURE:
+ * - Left column (lg:w-2/5): Login form
+ *   - Logo (250x250px)
+ *   - Form title: "Mulai Booking EZ"
+ *   - Email input
+ *   - Password input
+ *   - CAPTCHA image + refresh button
+ *   - CAPTCHA input field
+ *   - Forgot password link
+ *   - Submit button ("LOG IN")
+ *   - Register link
+ * - Right column (lg:w-3/5): Decorative SVG (hidden on mobile)
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Full width single column
+ * - Desktop (lg): Split 2/5 form, 3/5 decorative
+ * - Padding: p-12 mobile, lg:p-20 desktop
+ * 
+ * STYLING:
+ * - Input fields: Border-bottom style
+ * - Focus: Blue border (focus:border-blue-600)
+ * - Buttons: Rounded-full (pill-shaped)
+ * - Submit button: Blue bg (bg-blue-600), hover:bg-blue-700
+ * 
+ * SECURITY:
+ * - CAPTCHA prevents automated attacks
+ * - Password hidden (type="password")
+ * - CSRF: None implemented (consider adding token)
+ * - Session regeneration after login (in controller)
+ * 
+ * INTEGRATION:
+ * - Controller: LoginController (auth, sendResetOTP, verifyOTP, resetPassword)
+ * - Model: AkunModel (loginByEmail method)
+ * - Component: modal_reset_password.php (forgot password flow)
+ * 
+ * @package BookEZ
+ * @subpackage Views
+ * @version 1.0
+ */
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

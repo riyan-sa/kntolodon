@@ -1,6 +1,132 @@
 /**
- * Reset Password Flow - Login Page
- * Handles 3-step modal flow: Email Verification -> OTP Input -> New Password
+ * ============================================================================
+ * RESET-PASSWORD.JS - Password Reset Flow Handler
+ * ============================================================================
+ * 
+ * Complex module untuk menangani 3-step password reset workflow:
+ * - Step 1: Email Verification (send OTP)
+ * - Step 2: OTP Input (verify code)
+ * - Step 3: New Password (reset password)
+ * 
+ * FUNGSI UTAMA:
+ * 1. STEP 1 - EMAIL VERIFICATION
+ *    - User enters email address
+ *    - AJAX POST to: ?page=login&action=verify_email
+ *    - Server validates email dan sends 6-digit OTP via email
+ *    - Server stores OTP in session dengan 5-minute expiration
+ *    - On success: show OTP input modal
+ * 
+ * 2. STEP 2 - OTP INPUT
+ *    - Display email address for confirmation
+ *    - 5-minute countdown timer (visual feedback)
+ *    - User enters 6-digit OTP code
+ *    - AJAX POST to: ?page=login&action=verify_otp
+ *    - Server validates OTP and expiration
+ *    - On success: set session flag dan show new password modal
+ *    - Resend OTP button dengan cooldown timer
+ * 
+ * 3. STEP 3 - NEW PASSWORD
+ *    - User enters new password (min 8 chars)
+ *    - User confirms password (must match)
+ *    - AJAX POST to: ?page=login&action=reset_password
+ *    - Server validates OTP verified flag
+ *    - Server updates password (hashed)
+ *    - On success: clear session dan redirect to login
+ * 
+ * TIMER FUNCTIONALITY:
+ * - startOtpTimer(seconds): Countdown dari 5 minutes (300 seconds)
+ * - Display format: M:SS (e.g., 4:37)
+ * - Shows "Kadaluarsa" when timer reaches 0
+ * - Timer doesn't block form submission (server validates expiration)
+ * 
+ * - startResendCooldown(seconds): Cooldown untuk resend button
+ * - Prevents spam resend requests
+ * - Disables button during cooldown
+ * - Shows countdown in button text
+ * 
+ * MODAL FLOW:
+ * 1. Click "Lupa Password" → open email verification modal
+ * 2. Submit email → close email modal, open OTP modal
+ * 3. Submit OTP → close OTP modal, open new password modal
+ * 4. Submit new password → close modal, redirect to login
+ * 
+ * ERROR HANDLING:
+ * - AJAX errors: alert dengan error message
+ * - Validation errors: alert dengan specific error
+ * - Network errors: alert "Terjadi kesalahan"
+ * - OTP expired: alert "OTP kadaluarsa"
+ * - Password mismatch: alert "Password tidak cocok"
+ * 
+ * TARGET ELEMENTS (STEP 1):
+ * - #btnForgotPassword: Trigger button (on login page)
+ * - #modalVerifyEmail: Modal container
+ * - #formVerifyEmail: Form element
+ * - #closeModalVerifyEmail: Close button
+ * - #cancelVerifyEmail: Cancel button
+ * 
+ * TARGET ELEMENTS (STEP 2):
+ * - #modalInputOtp: Modal container
+ * - #formInputOtp: Form element
+ * - #displayEmail: Email display element
+ * - #otpTimer: Timer display element
+ * - #resendOtp: Resend OTP button
+ * - #closeModalInputOtp: Close button
+ * - #cancelInputOtp: Cancel button
+ * 
+ * TARGET ELEMENTS (STEP 3):
+ * - #modalNewPassword: Modal container
+ * - #formNewPassword: Form element
+ * - #closeModalNewPassword: Close button
+ * - #cancelNewPassword: Cancel button
+ * 
+ * STATE MANAGEMENT:
+ * - currentEmail: Stores email for display dan resend functionality
+ * - otpCountdown: Interval ID untuk OTP timer
+ * - resendCooldown: Interval ID untuk resend button cooldown
+ * - All state reset on modal close
+ * 
+ * AJAX PATTERN:
+ * - Uses fetch API untuk all requests
+ * - POST requests dengan FormData
+ * - JSON responses: {success: bool, message: string}
+ * - Error handling dengan try-catch
+ * 
+ * HELPER FUNCTIONS:
+ * - showModal(modal): Remove hidden, add flex
+ * - hideModal(modal): Add hidden, remove flex
+ * - Clear intervals on modal close
+ * 
+ * SECURITY FEATURES:
+ * - OTP: 6-digit random, 5-minute expiration
+ * - Session-based: OTP stored server-side
+ * - Rate limiting: Resend cooldown prevents spam
+ * - Password validation: Min 8 chars, match confirmation
+ * - Email validation: PNJ domain only (server-side)
+ * 
+ * EMAIL TEMPLATE:
+ * - Subject: "Kode OTP Reset Password - BookEZ"
+ * - Body: Contains 6-digit OTP + expiration notice
+ * - From: bookez.web@gmail.com (MAIL_FROM_ADDRESS)
+ * 
+ * PASSWORD POLICY:
+ * - Minimum 8 characters
+ * - Confirmation must match
+ * - Hashed via password_hash() server-side
+ * 
+ * USAGE:
+ * - Included in: view/login.php
+ * - Initializes on DOM ready
+ * - Triggered by "Lupa Password?" link
+ * 
+ * INTEGRATION:
+ * - Server: LoginController::verify_email(), verify_otp(), reset_password()
+ * - Database: akun table (password update)
+ * - Email: config/Email.php (SMTP sending)
+ * - Session: $_SESSION['reset_otp'], $_SESSION['reset_email'], $_SESSION['otp_verified']
+ * 
+ * @module reset-password
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
  */
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -1,3 +1,212 @@
+<?php
+/**
+ * ============================================================================
+ * MODAL_RESET_PASSWORD.PHP - Password Reset Modal (3-Step Flow)
+ * ============================================================================
+ * 
+ * Three-step password reset flow untuk users yang lupa password.
+ * Uses OTP verification via email untuk secure password recovery.
+ * 
+ * 3-STEP FLOW:
+ * STEP 1: VERIFY EMAIL
+ *    - User enters email address
+ *    - System sends 6-digit OTP to email
+ *    - OTP expires in 5 minutes
+ * 
+ * STEP 2: INPUT OTP
+ *    - User enters 6-digit code dari email
+ *    - Timer displays: "5:00" countdown
+ *    - Resend OTP available after 60 seconds
+ *    - Validates OTP against session/database
+ * 
+ * STEP 3: SET NEW PASSWORD
+ *    - User enters new password (min 8 chars)
+ *    - User confirms new password
+ *    - System updates password in database
+ *    - Redirect to login page
+ * 
+ * MODAL 1: VERIFY EMAIL (#modalVerifyEmail)
+ * - Form: #formVerifyEmail
+ * - Input: email (required, type="email")
+ * - Placeholder: "contoh@pnj.ac.id"
+ * - Buttons: Batal (cancel), Kirim OTP (submit)
+ * - Action: LoginController::sendResetOTP()
+ * - Validation: PNJ domain email check
+ * 
+ * MODAL 2: INPUT OTP (#modalInputOtp)
+ * - Form: #formInputOtp
+ * - Input: otp (6 digits, pattern="[0-9]{6}", maxlength="6")
+ * - Display: User's email (#displayEmail)
+ * - Timer: Countdown from 5:00 (#otpTimer)
+ * - Buttons: Batal, Verifikasi
+ * - Resend button: #resendOtp (disabled for 60 seconds)
+ * - Action: LoginController::verifyOTP()
+ * 
+ * MODAL 3: NEW PASSWORD (#modalNewPassword)
+ * - Form: #formNewPassword
+ * - Input 1: new_password (min 8 chars, type="password")
+ * - Input 2: confirm_password (must match new_password)
+ * - Buttons: Batal, Reset Password
+ * - Action: LoginController::resetPassword()
+ * 
+ * OTP GENERATION & VALIDATION:
+ * - OTP format: 6-digit numeric code (000000-999999)
+ * - Generation: rand(100000, 999999) or similar
+ * - Storage: $_SESSION['reset_otp'] with timestamp
+ * - Expiry: 5 minutes (300 seconds)
+ * - Validation: Compare input dengan session code + check timestamp
+ * 
+ * EMAIL SENDING:
+ * - SMTP: config/Email.php (PHPMailer)
+ * - Subject: "Kode Reset Password - BookEZ"
+ * - Body: OTP code + expiry warning
+ * - From: bookez.web@gmail.com
+ * - To: User's registered email
+ * 
+ * TIMER FUNCTIONALITY (JavaScript):
+ * - Initial: 5:00 (5 minutes)
+ * - Countdown: Updates every second
+ * - Format: MM:SS
+ * - Expiry: Shows "Kode OTP telah expired"
+ * - Implementation: setInterval() in reset-password.js
+ * 
+ * RESEND OTP FUNCTIONALITY:
+ * - Initial state: Disabled for 60 seconds
+ * - Cooldown: Prevents spam
+ * - After cooldown: Enabled, user can request new OTP
+ * - New OTP: Invalidates previous OTP
+ * - Timer: Resets to 5:00
+ * 
+ * TARGET ELEMENTS:
+ * MODAL 1:
+ * - #modalVerifyEmail: Container
+ * - #formVerifyEmail: Form
+ * - #emailVerify: Email input
+ * - #closeModalVerifyEmail: Close button
+ * - #cancelVerifyEmail: Cancel button
+ * 
+ * MODAL 2:
+ * - #modalInputOtp: Container
+ * - #formInputOtp: Form
+ * - #otpCode: OTP input (6 digits)
+ * - #displayEmail: Shows user's email
+ * - #otpTimer: Countdown timer display
+ * - #resendOtp: Resend button
+ * - #closeModalInputOtp: Close button
+ * - #cancelInputOtp: Cancel button
+ * 
+ * MODAL 3:
+ * - #modalNewPassword: Container
+ * - #formNewPassword: Form
+ * - #newPasswordReset: New password input
+ * - #confirmPasswordReset: Confirm password input
+ * - #closeModalNewPassword: Close button
+ * - #cancelNewPassword: Cancel button
+ * 
+ * FORM SUBMISSIONS:
+ * Step 1: POST to ?page=login&action=sendResetOTP
+ *    - Field: email
+ *    - Response: Success → open modal 2, Error → alert
+ * 
+ * Step 2: POST to ?page=login&action=verifyOTP
+ *    - Field: otp
+ *    - Response: Valid → open modal 3, Invalid → alert
+ * 
+ * Step 3: POST to ?page=login&action=resetPassword
+ *    - Fields: new_password, confirm_password
+ *    - Response: Success → redirect login, Error → alert
+ * 
+ * VALIDATION RULES:
+ * Step 1 (Email):
+ * - Required, valid email format
+ * - Must be PNJ domain (@pnj.ac.id or subdomains)
+ * - Email must exist in database
+ * 
+ * Step 2 (OTP):
+ * - Required, exactly 6 digits
+ * - Must match session/DB stored OTP
+ * - Must not be expired (< 5 minutes old)
+ * 
+ * Step 3 (Password):
+ * - Required, minimum 8 characters
+ * - new_password !== old_password (optional check)
+ * - new_password === confirm_password (must match)
+ * 
+ * JAVASCRIPT INTEGRATION:
+ * - assets/js/reset-password.js: Complete flow management
+ * - Functions:
+ *   * openModal1(): Show email verification
+ *   * openModal2(email): Show OTP input + start timer
+ *   * openModal3(): Show new password form
+ *   * closeAllModals(): Hide all modals
+ *   * startOtpTimer(): Countdown from 5:00
+ *   * handleResendOtp(): Resend OTP functionality
+ * 
+ * MODAL TRANSITIONS:
+ * - Step 1 → Step 2: On successful OTP send
+ * - Step 2 → Step 3: On successful OTP verification
+ * - Step 3 → Login: On successful password reset
+ * - Cancel any step: Close all modals, return to login
+ * 
+ * STYLING:
+ * - All modals: Same design pattern
+ * - Overlay: bg-black/50 (50% opacity)
+ * - Modal: bg-white rounded-2xl shadow-2xl
+ * - Max width: max-w-md
+ * - Z-index: z-50
+ * - Info box (OTP modal): bg-blue-50 border-blue-200
+ * 
+ * INPUT STYLING:
+ * - Email: Standard input styling
+ * - OTP: text-center text-2xl font-bold tracking-widest (large digits)
+ * - Password: Standard input with rounded-lg
+ * - Focus: ring-2 ring-blue-500
+ * 
+ * ERROR HANDLING:
+ * - Email not found → alert "Email tidak terdaftar!"
+ * - Invalid OTP → alert "Kode OTP salah!"
+ * - Expired OTP → alert "Kode OTP sudah expired!"
+ * - Password mismatch → alert "Password tidak cocok!"
+ * - All errors via JavaScript alert() from controller
+ * 
+ * SUCCESS MESSAGES:
+ * - OTP sent → "Kode OTP telah dikirim ke email Anda"
+ * - OTP valid → Proceed to password reset
+ * - Password reset → "Password berhasil direset! Silakan login."
+ * 
+ * SECURITY FEATURES:
+ * - OTP expiration (5 minutes)
+ * - Resend cooldown (60 seconds)
+ * - One-time use OTP (invalidated after verification)
+ * - Email verification before reset
+ * - No password visibility toggle
+ * - Session-based OTP storage
+ * 
+ * ACCESSIBILITY:
+ * - Labels for all inputs
+ * - Required attributes
+ * - Pattern validation (OTP)
+ * - Keyboard navigation
+ * - Escape key closes modals
+ * - Focus trap in active modal
+ * 
+ * USAGE:
+ * - Included in: view/login.php
+ * - Triggered by: "Lupa Password?" link below login form
+ * - Pattern: require __DIR__ . '/components/modal_reset_password.php';
+ * 
+ * INTEGRATION:
+ * - Controller: LoginController (sendResetOTP, verifyOTP, resetPassword)
+ * - Model: AkunModel (findByEmail, updatePassword)
+ * - Config: Email.php (SMTP email sending)
+ * - Database: akun table
+ * - JavaScript: assets/js/reset-password.js
+ * 
+ * @package BookEZ
+ * @subpackage Views\Components
+ * @version 1.0
+ */
+?>
 <!-- Modal Reset Password (3 Steps) -->
 <!-- Step 1: Verifikasi Email -->
 <div id="modalVerifyEmail" class="fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 hidden">

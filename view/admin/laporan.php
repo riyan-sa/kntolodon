@@ -1,4 +1,282 @@
 <?php
+/**
+ * ============================================================================
+ * ADMIN/LAPORAN.PHP - Booking Reports & Analytics Dashboard
+ * ============================================================================
+ * 
+ * Comprehensive reporting page untuk analisis booking trends dan usage statistics.
+ * Multi-period tabs: Harian, Bulanan, Tahunan dengan different data structures.
+ * 
+ * ACCESS CONTROL:
+ * - Admin & Super Admin only
+ * - Blocks regular User access
+ * 
+ * FEATURES:
+ * 1. TAB SYSTEM (3 Periods)
+ *    - TAB 1: Harian (Daily) - Specific date report
+ *    - TAB 2: Bulanan (Monthly) - Month summary report
+ *    - TAB 3: Tahunan (Yearly) - Year summary report
+ *    - Each tab shows: Filter form + Stats cards + Table + Chart
+ * 
+ * 2. FILTER FORMS (Period-specific)
+ *    - Harian: Date picker (tanggal)
+ *    - Bulanan: Month + Year selects
+ *    - Tahunan: Year select
+ *    - Submit: Reloads with filtered data
+ * 
+ * 3. STATISTICS CARDS (4 Cards per tab)
+ *    - Total Booking: Count of all bookings in period
+ *    - Ruangan Terfavorit: Most booked room in period
+ *    - Total Durasi: Sum of booking durations (jam:menit)
+ *    - Rata-rata Durasi: Average duration per booking
+ *    - Color-coded icons (blue, green, purple, orange)
+ * 
+ * 4. BOOKING TABLE
+ *    - Columns vary by period:
+ *      * Harian: No, Ruangan, Nama, Jam, Durasi, Status
+ *      * Bulanan: No, Ruangan, Total Booking, Total Durasi
+ *      * Tahunan: No, Bulan, Total Booking, Total Durasi
+ *    - Sorted by appropriate field
+ *    - Color-coded status badges (Harian only)
+ * 
+ * 5. ANALYTICS CHART
+ *    - Chart.js bar chart
+ *    - Harian: Bookings per room (bar chart)
+ *    - Bulanan: Bookings per day (line/bar chart)
+ *    - Tahunan: Bookings per month (bar chart)
+ *    - Responsive canvas element
+ * 
+ * DATA FROM CONTROLLER:
+ * - $tab (string): Active tab ('harian', 'bulanan', 'tahunan')
+ * - $tanggal (string): Selected date for Harian (YYYY-MM-DD)
+ * - $bulan (int): Selected month for Bulanan (1-12)
+ * - $tahun (int): Selected year for all tabs
+ * - $data (array): Booking data for selected period
+ * - $stats (array): Statistics cards data
+ * - $mostBookedRoom (array): Most booked room info
+ * - $availableYears (array): Years with booking data
+ * 
+ * DATA STRUCTURES:
+ * 
+ * HARIAN DATA:
+ * $harianBooking = [
+ *   'kode_booking' => string,
+ *   'nama_ruangan' => string,
+ *   'ketua_nama' => string|null (regular) OR 'nama_instansi' (external),
+ *   'waktu_mulai' => string (HH:MM:SS),
+ *   'waktu_selesai' => string (HH:MM:SS),
+ *   'durasi_menit' => int,
+ *   'nama_status' => string,
+ *   'is_external' => int
+ * ];
+ * 
+ * BULANAN DATA:
+ * $bulananData = [
+ *   'nama_ruangan' => string,
+ *   'total_booking' => int,
+ *   'total_durasi_menit' => int
+ * ];
+ * 
+ * TAHUNAN DATA:
+ * $tahunanData = [
+ *   'bulan' => int (1-12),
+ *   'nama_bulan' => string (Januari-Desember),
+ *   'total_booking' => int,
+ *   'total_durasi_menit' => int
+ * ];
+ * 
+ * STATISTICS STRUCTURE:
+ * $stats = [
+ *   'total_booking' => int,
+ *   'total_durasi' => int (menit),
+ *   'rata_rata_durasi' => float (menit),
+ *   'ruangan_terfavorit' => string|null
+ * ];
+ * 
+ * MOST BOOKED ROOM:
+ * $mostBookedRoom = [
+ *   'nama_ruangan' => string,
+ *   'total_booking' => int
+ * ];
+ * 
+ * HELPER FUNCTIONS:
+ * - formatTime($time): Converts "HH:MM:SS" to "HH:MM"
+ * - formatDuration($minutes): Converts minutes to "X Jam Y Menit" format
+ *   * Pattern: 90 minutes → "1 Jam 30 Menit"
+ *   * Pattern: 60 minutes → "1 Jam"
+ *   * Pattern: 45 minutes → "45 Menit"
+ * 
+ * FILTER FORMS:
+ * 1. HARIAN FILTER
+ *    - Action: ?page=admin&action=laporan&tab=harian
+ *    - Field: tanggal (date, default=today)
+ *    - Button: "Tampilkan Laporan"
+ * 
+ * 2. BULANAN FILTER
+ *    - Action: ?page=admin&action=laporan&tab=bulanan
+ *    - Fields: bulan (select 1-12), tahun (select from available)
+ *    - Button: "Tampilkan Laporan"
+ * 
+ * 3. TAHUNAN FILTER
+ *    - Action: ?page=admin&action=laporan&tab=tahunan
+ *    - Field: tahun (select from available)
+ *    - Button: "Tampilkan Laporan"
+ * 
+ * STATISTICS CARDS:
+ * - Grid: 1 col (mobile), 2 cols (md), 4 cols (lg)
+ * - Each card: Icon + Label + Value
+ * - Icon colors:
+ *   * Total Booking: Blue (bg-blue-100 text-blue-600)
+ *   * Ruangan Terfavorit: Green (bg-green-100 text-green-600)
+ *   * Total Durasi: Purple (bg-purple-100 text-purple-600)
+ *   * Rata-rata Durasi: Orange (bg-orange-100 text-orange-600)
+ * - Inline SVG icons (no icon libraries)
+ * 
+ * TABLE STRUCTURE (Harian):
+ * - No: Sequential number (1, 2, 3, ...)
+ * - Ruangan: Room name
+ * - Nama: Ketua name (regular) or Instansi (external)
+ * - Jam: Formatted time range (HH:MM - HH:MM)
+ * - Durasi: Formatted duration (X Jam Y Menit)
+ * - Status: Badge dengan color coding
+ * 
+ * TABLE STRUCTURE (Bulanan):
+ * - No: Sequential number
+ * - Ruangan: Room name
+ * - Total Booking: Count of bookings for room
+ * - Total Durasi: Sum duration for room (formatted)
+ * 
+ * TABLE STRUCTURE (Tahunan):
+ * - No: Sequential number
+ * - Bulan: Month name (Januari - Desember)
+ * - Total Booking: Count of bookings in month
+ * - Total Durasi: Sum duration in month (formatted)
+ * 
+ * CHART CONFIGURATIONS:
+ * - Library: Chart.js (included via CDN)
+ * - Canvas: #bookingChart (responsive)
+ * - Chart types:
+ *   * Harian: Bar chart (bookings per room)
+ *   * Bulanan: Bar chart (bookings per day)
+ *   * Tahunan: Bar chart (bookings per month)
+ * - Colors: Blue palette (primary color: #1e73be)
+ * 
+ * CHART DATA PATTERNS:
+ * ```javascript
+ * // Harian: Bookings per room
+ * labels: ['Ruang A', 'Ruang B', ...]
+ * data: [5, 3, 7, ...]
+ * 
+ * // Bulanan: Bookings per day
+ * labels: ['1', '2', '3', ..., '31']
+ * data: [2, 0, 3, 1, ...]
+ * 
+ * // Tahunan: Bookings per month
+ * labels: ['Jan', 'Feb', 'Mar', ..., 'Dec']
+ * data: [15, 20, 18, ...]
+ * ```
+ * 
+ * TARGET ELEMENTS:
+ * - [data-tab-action]: Tab buttons (data-tab-name attribute)
+ * - .tab-content: Tab content containers
+ * - #bookingChart: Chart.js canvas
+ * - #laporan-data: Data container (JSON data for JS)
+ * 
+ * JAVASCRIPT:
+ * - assets/js/laporan.js: Tab switching, chart rendering
+ * - Chart.js: Chart visualization library
+ * - Functions:
+ *   * switchTab(tabName): Change active tab
+ *   * initChart(tab, data): Render chart based on tab
+ * 
+ * DATA ATTRIBUTES PATTERN:
+ * ```php
+ * <div id="laporan-data"
+ *      data-tab="<?= $tab ?>"
+ *      data-harian='<?= json_encode($harianChartData ?? []) ?>'
+ *      data-bulanan='<?= json_encode($bulananChartData ?? []) ?>'
+ *      data-tahunan='<?= json_encode($tahunanChartData ?? []) ?>'
+ *      style="display:none;">
+ * </div>
+ * ```
+ * 
+ * CSS:
+ * - External: assets/css/laporan.css
+ * - Tailwind utilities
+ * - Blue header: bg-[#1e73be]
+ * - Card styles: Rounded, shadow, white background
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Single column, stacked cards, scrollable table
+ * - Tablet (md): 2-column grid for stats
+ * - Desktop (lg): 4-column grid for stats, full table
+ * - Chart: Responsive via Chart.js options
+ * 
+ * TAB SWITCHING:
+ * - Active tab: bg-blue-600 text-white
+ * - Inactive tab: bg-white text-gray-600 hover:bg-blue-50
+ * - JavaScript handles content visibility
+ * - URL param: ?tab=harian/bulanan/tahunan
+ * 
+ * EMPTY STATE:
+ * - No data message: "Tidak ada data booking untuk periode ini"
+ * - Shows when: $data is empty array
+ * - Stats cards show zeros
+ * - Chart shows empty state
+ * 
+ * ROUTING:
+ * - View: ?page=admin&action=laporan
+ * - Harian filter: ?page=admin&action=laporan&tab=harian&tanggal={date}
+ * - Bulanan filter: ?page=admin&action=laporan&tab=bulanan&bulan={m}&tahun={y}
+ * - Tahunan filter: ?page=admin&action=laporan&tab=tahunan&tahun={y}
+ * 
+ * BUSINESS RULES:
+ * - Include SELESAI bookings only (exclude DIBATALKAN, HANGUS)
+ * - Duration calculation: waktu_selesai - waktu_mulai
+ * - Most booked room: Room dengan highest booking count
+ * - Average duration: Total duration / Total bookings
+ * - External bookings: Counted and included in statistics
+ * 
+ * QUERY OPTIMIZATION:
+ * - Use date range filters in SQL
+ * - Aggregate functions: COUNT(), SUM(), AVG()
+ * - Group by: Room (Bulanan), Month (Tahunan)
+ * - Index suggestions: tanggal, id_status, id_ruangan
+ * 
+ * SUCCESS FLOW:
+ * 1. Admin navigates to Laporan page
+ * 2. Default: Current month (Bulanan tab)
+ * 3. Admin selects tab (Harian/Bulanan/Tahunan)
+ * 4. Admin adjusts filter (date/month/year)
+ * 5. Clicks "Tampilkan Laporan"
+ * 6. Page reloads with filtered data
+ * 7. Stats cards update
+ * 8. Table updates
+ * 9. Chart re-renders
+ * 
+ * ERROR HANDLING:
+ * - Invalid date → Use today's date
+ * - Invalid month → Use current month
+ * - Invalid year → Use current year
+ * - No data → Show empty state message
+ * - Chart error → Fallback to table only
+ * 
+ * SECURITY:
+ * - Admin/Super Admin access only
+ * - Date input sanitization
+ * - XSS prevention: htmlspecialchars on outputs
+ * - No sensitive user data exposed
+ * 
+ * INTEGRATION:
+ * - Controller: AdminController (laporan action)
+ * - Model: LaporanModel (getHarian, getBulanan, getTahunan, getStats, getMostBooked)
+ * - Database: booking, ruangan, status_booking tables
+ * - Chart.js: External CDN library
+ * 
+ * @package BookEZ
+ * @subpackage Views\Admin
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

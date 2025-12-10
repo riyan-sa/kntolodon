@@ -1,4 +1,274 @@
 <?php
+/**
+ * ============================================================================
+ * ADMIN/MEMBER_LIST.PHP - Member Management (User & Admin)
+ * ============================================================================
+ * 
+ * Comprehensive member management dengan dual tabs: User list & Admin list.
+ * Independent pagination per tab, CRUD modals, validation, email domain checks.
+ * 
+ * ACCESS CONTROL:
+ * - Admin & Super Admin only
+ * - Blocks regular User access
+ * 
+ * CRITICAL FEATURES:
+ * 1. DUAL TAB SYSTEM
+ *    - TAB 1: User List (Mahasiswa/Dosen/Tenaga Pendidikan)
+ *    - TAB 2: Admin List (Admin/Super Admin)
+ *    - Independent pagination: pg_user, pg_admin
+ *    - Tab switching preserves pagination state via URL
+ * 
+ * 2. PAGINATION PERSISTENCE
+ *    - URL-based state: ?page=admin&action=member_list&tab=user&pg_user={n}
+ *    - JavaScript tracks: currentPageUser, currentPageAdmin
+ *    - switchTab() updates URL dengan window.location.href (full reload)
+ *    - initializeActiveTab() restores pagination from URL params
+ *    - See: temp/BUGFIX_PAGINATION_PERSISTENCE.md
+ * 
+ * 3. DYNAMIC TABLE HEADERS
+ *    - Header col-span adjusts based on active tab
+ *    - User tab: 6 columns (Profil(1) | Nama(3) | Nomor Induk(2) | Prodi(2) | Validasi(2) | Status(2))
+ *    - Admin tab: 4 columns (Profil(3) | Nama(4) | NIP(3) | Status(2))
+ *    - updateTableHeader(tab) function handles dynamic updates
+ *    - Header elements have IDs: #header-profil, #header-nama, etc.
+ * 
+ * 4. USER TAB FEATURES
+ *    - Display: Foto profil, Nama, NIM, Prodi, Validasi (screenshot), Status
+ *    - Actions: View (eye icon), Edit (pencil icon)
+ *    - No delete (users self-manage via profile page)
+ *    - Status toggle: Aktif ↔ Tidak Aktif (admin validation)
+ *    - Validasi mahasiswa: View screenshot KubacaPNJ
+ * 
+ * 5. ADMIN TAB FEATURES
+ *    - Display: Foto profil, Nama, NIP, Status
+ *    - Actions: Edit (pencil icon), Delete (trash icon)
+ *    - Create: FAB button (+ icon) at bottom-right
+ *    - FAB visibility: Hidden on User tab, visible on Admin tab
+ *    - Email domain: Must be @*.pnj.ac.id or @pnj.ac.id (NOT @stu.pnj.ac.id)
+ * 
+ * 6. MODAL SYSTEM (4 Modes)
+ *    - MODE 1: 'view' (User only) - Read-only member details
+ *    - MODE 2: 'edit' (Both tabs) - Edit member data
+ *    - MODE 3: 'add' (Admin only) - Create new admin
+ *    - MODE 4: 'delete_confirm' (Admin only) - Delete confirmation
+ * 
+ * 7. EMAIL VALIDATION
+ *    - User (Mahasiswa): nama.x@stu.pnj.ac.id (single char before @stu)
+ *    - Admin/Dosen: nama@*.pnj.ac.id or nama@pnj.ac.id (NOT @stu.pnj.ac.id)
+ *    - Pattern enforcement: Client (JS) + Server (Controller)
+ *    - See: temp/UPDATE_EMAIL_VALIDATION_PATTERNS.md
+ * 
+ * 8. PASSWORD POLICY
+ *    - Minimum 8 characters (enforced both client & server)
+ *    - Required for new admin creation
+ *    - Optional for edit (only if filled)
+ *    - Pattern: validateAddForm() and validateEditForm() in JS
+ * 
+ * DATA FROM CONTROLLER:
+ * - $members (array): Member list for active tab (User or Admin)
+ * - $paginationDataUser (array): Pagination for User tab
+ * - $paginationDataAdmin (array): Pagination for Admin tab
+ * - $currentTab (string): Active tab ('user' or 'admin')
+ * - $currentPageUser (int): Current page for User tab
+ * - $currentPageAdmin (int): Current page for Admin tab
+ * 
+ * MEMBER DATA STRUCTURE:
+ * $member = [
+ *   'nomor_induk' => string (NIM for User, NIP for Admin),
+ *   'username' => string (display name),
+ *   'email' => string (validated PNJ domain),
+ *   'role' => string ('User', 'Admin', 'Super Admin'),
+ *   'status' => string ('Aktif', 'Tidak Aktif'),
+ *   'jurusan' => string|null (User only),
+ *   'prodi' => string|null (User only),
+ *   'foto_profil' => string|null (path),
+ *   'validasi_mahasiswa' => string|null (User only, screenshot path)
+ * ];
+ * 
+ * TABLE STRUCTURE (User Tab):
+ * - Grid: 12 columns total
+ * - Profil: col-span-1 (Avatar image)
+ * - Nama: col-span-3 (Username + Email below)
+ * - Nomor Induk: col-span-2 (NIM)
+ * - Prodi: col-span-2 (Program Studi)
+ * - Validasi: col-span-2 (Screenshot link or "-")
+ * - Status: col-span-2 (Badge + Actions)
+ * 
+ * TABLE STRUCTURE (Admin Tab):
+ * - Grid: 12 columns total
+ * - Profil: col-span-3 (Avatar image)
+ * - Nama: col-span-4 (Username + Email below)
+ * - NIP: col-span-3 (Nomor Induk)
+ * - Status: col-span-2 (Badge + Actions)
+ * 
+ * FAB (Floating Action Button):
+ * - Position: fixed bottom-8 right-8
+ * - Icon: Plus sign
+ * - Color: Blue (bg-blue-600)
+ * - Visibility: Controlled by JavaScript based on active tab
+ * - Action: Opens Add Admin modal
+ * 
+ * MODAL FORMS:
+ * 1. VIEW MODAL (User only)
+ *    - All fields read-only
+ *    - Shows: Foto, Nama, NIM, Email, Role, Jurusan, Prodi, Status
+ *    - Close button only (no submit)
+ * 
+ * 2. EDIT MODAL (Both tabs)
+ *    - User: Can edit Nama, Status, Role (dropdown: Mahasiswa/Dosen/Tenaga Pendidikan)
+ *    - Admin: Can edit Nama, Email, Status, Role (Admin/Super Admin)
+ *    - Password field optional (only update if filled)
+ *    - Submit: POST to ?page=admin&action=update_member or update_admin
+ * 
+ * 3. ADD MODAL (Admin only)
+ *    - Fields: Nama, Email, Password, Role (Admin/Super Admin)
+ *    - All fields required
+ *    - Email validation: Must be admin domain (NOT @stu.pnj.ac.id)
+ *    - Password: Min 8 characters
+ *    - Submit: POST to ?page=admin&action=create_admin
+ * 
+ * 4. DELETE MODAL (Admin only)
+ *    - Confirmation dialog dengan admin name
+ *    - Warning: "Tindakan ini tidak dapat diurungkan"
+ *    - Submit: POST to ?page=admin&action=delete_admin
+ *    - Hidden NIP field
+ * 
+ * FORM VALIDATION (JavaScript):
+ * - validateAddForm(): Required fields, email pattern, password length (8 chars)
+ * - validateEditForm(): Email pattern (if changed), password length (if filled)
+ * - Email patterns:
+ *   ```javascript
+ *   // Mahasiswa (User tab - NOT used in Admin tab)
+ *   const mahasiswaPattern = /^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/;
+ *   
+ *   // Admin/Dosen (Admin tab)
+ *   const dosenPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.pnj\.ac\.id$/;
+ *   const pnjDirectPattern = /^[a-zA-Z0-9._%+-]+@pnj\.ac\.id$/;
+ *   const stuPattern = /@stu\.pnj\.ac\.id$/;
+ *   // Valid if: (dosenPattern OR pnjDirectPattern) AND NOT stuPattern
+ *   ```
+ * 
+ * TARGET ELEMENTS:
+ * - #btn-tab-user: User tab button
+ * - #btn-tab-admin: Admin tab button
+ * - #table-user: User table container
+ * - #table-admin: Admin table container
+ * - #fab-add-admin: FAB button (visible only on Admin tab)
+ * - #modal-member: Multi-mode modal
+ * - #header-profil, #header-nama, etc.: Dynamic table headers
+ * - [data-member-tab]: Tab buttons
+ * - [data-action="view"]: View buttons (data-member-id)
+ * - [data-action="edit"]: Edit buttons (data-member-id)
+ * - [data-action="delete"]: Delete buttons (data-member-id)
+ * 
+ * JAVASCRIPT:
+ * - assets/js/member-list.js: Tab switching, modal management, validation
+ * - Functions:
+ *   * switchTab(tab): Change active tab dengan URL update
+ *   * initializeActiveTab(): Restore tab state from URL
+ *   * updateTableHeader(tab): Adjust col-span based on tab
+ *   * openViewModal(memberId): Show view modal
+ *   * openEditModal(memberId, isAdmin): Show edit modal
+ *   * openAddModal(): Show add admin modal
+ *   * openDeleteModal(memberId): Show delete confirmation
+ *   * validateAddForm(): Validate new admin form
+ *   * validateEditForm(): Validate edit form
+ * 
+ * DATA ATTRIBUTES PATTERN:
+ * ```php
+ * <div id="member-data"
+ *      data-base-path="<?= $basePath ?>"
+ *      data-user-role="<?= $_SESSION['user']['role'] ?>"
+ *      data-members='<?= json_encode($members) ?>'
+ *      style="display:none;">
+ * </div>
+ * ```
+ * 
+ * CSS:
+ * - External: assets/css/member-list.css
+ * - Tailwind utilities
+ * - Tab styles: tab-active (blue) vs tab-inactive (gray)
+ * - Avatar: Circular, w-10 h-10
+ * - Badges: Rounded-full, color-coded status
+ * 
+ * ROUTING:
+ * - View: ?page=admin&action=member_list&tab={user|admin}&pg_user={n}&pg_admin={m}
+ * - Create admin: POST to ?page=admin&action=create_admin
+ * - Update user: POST to ?page=admin&action=update_member
+ * - Update admin: POST to ?page=admin&action=update_admin
+ * - Delete admin: POST to ?page=admin&action=delete_admin
+ * 
+ * PAGINATION:
+ * - User tab: ?page=admin&action=member_list&tab=user&pg_user={n}
+ * - Admin tab: ?page=admin&action=member_list&tab=admin&pg_admin={n}
+ * - 10 records per page for both tabs
+ * - State persistence via URL parameters
+ * - JavaScript: currentPageUser, currentPageAdmin variables
+ * 
+ * STATUS BADGES:
+ * - Aktif: Green (bg-green-100 text-green-800)
+ * - Tidak Aktif: Red (bg-red-100 text-red-800)
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Scrollable table, stacked headers
+ * - Tablet: 2-column layout
+ * - Desktop: Full table display
+ * - Modal: Full screen mobile, max-w-xl desktop
+ * 
+ * BUSINESS RULES:
+ * - Admin can edit User status (validation approval)
+ * - Admin can create/edit/delete other Admins
+ * - Super Admin has same permissions as Admin in this context
+ * - User cannot delete themselves (self-managed via profile)
+ * - Email domain strictly enforced (PNJ only)
+ * - Password min 8 chars on creation (security policy)
+ * 
+ * SUCCESS FLOW (Add Admin):
+ * 1. Click FAB button on Admin tab
+ * 2. Modal opens with empty form
+ * 3. Fill: Nama, Email (@*.pnj.ac.id), Password (8+ chars), Role
+ * 4. Client validates form
+ * 5. Submit to server
+ * 6. Server validates email domain + password length
+ * 7. Creates admin record
+ * 8. Alert success, reload page
+ * 9. New admin appears in Admin tab
+ * 
+ * SUCCESS FLOW (Edit User Status):
+ * 1. Admin views User list
+ * 2. Clicks edit icon on user
+ * 3. Modal opens with user data
+ * 4. Changes status: Tidak Aktif → Aktif (validation)
+ * 5. Submit to server
+ * 6. Server updates status
+ * 7. Alert success, reload page
+ * 8. User status updated (can now login)
+ * 
+ * ERROR HANDLING:
+ * - Invalid email → alert "Email harus menggunakan domain PNJ!"
+ * - Short password → alert "Password minimal 8 karakter!"
+ * - Duplicate email → alert "Email sudah terdaftar!"
+ * - Missing fields → HTML5 validation + JS check
+ * - Delete error → alert "Gagal menghapus admin!"
+ * 
+ * SECURITY:
+ * - Admin/Super Admin access only
+ * - Email domain validation (client + server)
+ * - Password strength enforcement (8 chars)
+ * - No self-deletion prevention (should implement)
+ * - XSS prevention: htmlspecialchars on outputs
+ * 
+ * INTEGRATION:
+ * - Controller: AdminController (member_list, create_admin, update_member, update_admin, delete_admin)
+ * - Model: MemberModel (getAll, getByNomor, create, update, delete, isEmailExists)
+ * - Model: AkunModel (same methods)
+ * - Database: akun table
+ * - See: temp/IMPLEMENTASI_PAGINATION_MEMBER_LIST.md
+ * 
+ * @package BookEZ
+ * @subpackage Views\Admin
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

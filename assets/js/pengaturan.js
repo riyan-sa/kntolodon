@@ -1,4 +1,112 @@
-// Pengaturan Sistem - JavaScript
+/**
+ * ============================================================================
+ * PENGATURAN.JS - System Settings Page Scripts
+ * ============================================================================
+ * 
+ * Module untuk menangani system settings page (Super Admin only):
+ * - Tab switching (Waktu Operasi vs Hari Libur)
+ * - Modal management untuk CRUD operations
+ * - Event delegation untuk dynamic content
+ * 
+ * FUNGSI UTAMA:
+ * 1. TAB SWITCHING
+ *    - switchTab(tabName): Toggle between 'waktu-operasi' dan 'hari-libur'
+ *    - Initial state: waktu-operasi tab active
+ * 
+ * 2. WAKTU OPERASI MODALS
+ *    - openEditWaktuModal(): Open edit modal dengan form fields
+ *    - closeEditWaktuModal(): Close edit modal
+ *    - Form fields: hari, jam_buka, jam_tutup, is_aktif
+ *    - Submit to: ?page=admin&action=update_waktu_operasi
+ * 
+ * 3. HARI LIBUR MODALS
+ *    - openAddLiburModal(): Open add modal (empty form)
+ *    - openEditLiburModal(): Open edit modal (populated form)
+ *    - openDeleteLiburModal(): Open delete confirmation modal
+ *    - Close functions untuk each modal type
+ *    - Submit to: create/update/delete hari_libur actions
+ * 
+ * 4. MODAL OVERLAY HANDLERS
+ *    - setupModalOverlays(): Attach click handlers to overlays
+ *    - Click overlay → close corresponding modal
+ *    - Prevents event bubbling dari modal content
+ * 
+ * 5. EVENT DELEGATION
+ *    - [data-tab-action]: Tab switching buttons
+ *    - [data-modal-edit-waktu]: Edit waktu operasi buttons
+ *    - [data-modal-add-libur]: Add hari libur button
+ *    - [data-modal-edit-libur]: Edit hari libur buttons
+ *    - [data-modal-delete-libur]: Delete hari libur buttons
+ *    - Cancel/Close buttons untuk all modals
+ * 
+ * TAB STRUCTURE:
+ * - waktu-operasi: 7 records (Senin-Minggu) dengan edit functionality
+ * - hari-libur: Dynamic list dengan add/edit/delete operations
+ * 
+ * TARGET ELEMENTS (TABS):
+ * - [data-tab-action]: Tab button elements
+ * - #btn-tab-waktu: Waktu Operasi tab button
+ * - #btn-tab-libur: Hari Libur tab button
+ * - #tab-waktu-operasi: Waktu Operasi content
+ * - #tab-hari-libur: Hari Libur content
+ * 
+ * TARGET ELEMENTS (WAKTU OPERASI MODAL):
+ * - #modal-edit-waktu: Modal container
+ * - #overlay-edit-waktu: Modal overlay
+ * - #form-edit-waktu: Form element
+ * - #edit-hari: Hari input (hidden, read-only)
+ * - #edit-jam-buka: Jam Buka input (time)
+ * - #edit-jam-tutup: Jam Tutup input (time)
+ * - #edit-is-aktif: Is Aktif checkbox
+ * - #btn-cancel-edit-waktu: Cancel button
+ * 
+ * TARGET ELEMENTS (HARI LIBUR MODALS):
+ * - #modal-add-libur: Add modal container
+ * - #modal-edit-libur: Edit modal container
+ * - #modal-delete-libur: Delete confirmation modal
+ * - Corresponding overlays, forms, inputs, buttons
+ * 
+ * DATA ATTRIBUTES PATTERN:
+ * - data-hari: Hari name (Senin, Selasa, etc.)
+ * - data-jam-buka: Jam Buka value (HH:MM)
+ * - data-jam-tutup: Jam Tutup value (HH:MM)
+ * - data-is-aktif: Is Aktif value (1 or 0)
+ * - data-id: Hari Libur ID
+ * - data-tanggal: Tanggal value (YYYY-MM-DD)
+ * - data-tanggal-formatted: Formatted date for display
+ * - data-keterangan: Keterangan/description
+ * 
+ * FORM SUBMISSIONS:
+ * - All forms use traditional POST submission (no AJAX)
+ * - Server-side validation dan database updates
+ * - Redirect back to pengaturan page after success
+ * 
+ * VALIDATION:
+ * - Server-side only (no client-side validation)
+ * - Jam Tutup must be after Jam Buka
+ * - Tanggal must not be past date
+ * - Required fields enforced by HTML attributes
+ * 
+ * CSS CLASSES:
+ * - tab-active: Active tab styling
+ * - tab-inactive: Inactive tab styling
+ * - hidden: Display none
+ * 
+ * USAGE:
+ * - Included in: view/admin/pengaturan.php
+ * - Access: Super Admin only
+ * - Initializes on DOM ready
+ * 
+ * INTEGRATION:
+ * - Server: AdminController pengaturan methods
+ * - Database: waktu_operasi, hari_libur tables
+ * - Validation: PengaturanModel::validateWaktuOperasi(), validateHariLibur()
+ * - Impact: BookingController uses validation untuk block bookings
+ * 
+ * @module pengaturan
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initial state: show waktu operasi tab

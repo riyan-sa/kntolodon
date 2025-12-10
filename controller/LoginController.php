@@ -1,14 +1,117 @@
 <?php
+/**
+ * ============================================================================
+ * LOGINCONTROLLER.PHP - Authentication & Password Reset Controller
+ * ============================================================================
+ * 
+ * Controller untuk menangani autentikasi user, logout, dan reset password.
+ * Menggunakan email-based login dengan captcha validation dan OTP untuk reset password.
+ * 
+ * FUNGSI UTAMA:
+ * 1. LOGIN - Email + password authentication dengan captcha
+ * 2. LOGOUT - Session destruction
+ * 3. RESET PASSWORD - OTP-based password reset via email
+ *    a. verify_email() - Validate email dan kirim OTP
+ *    b. verify_otp() - Validate OTP code
+ *    c. reset_password() - Update password setelah OTP verified
+ * 
+ * ROUTES:
+ * - ?page=login&action=index - Display login form
+ * - ?page=login&action=auth - Process login (POST)
+ * - ?page=login&action=logout - Logout user
+ * - ?page=login&action=verify_email - Send OTP (AJAX POST)
+ * - ?page=login&action=verify_otp - Verify OTP (AJAX POST)
+ * - ?page=login&action=reset_password - Reset password (POST)
+ * 
+ * LOGIN FLOW:
+ * 1. User enters email (NOT username) + password + captcha
+ * 2. Validate captcha (case-insensitive, stored in $_SESSION['code'])
+ * 3. Validate email format dan PNJ domain
+ * 4. Authenticate via AkunModel::loginByEmail()
+ * 5. Check account status (must be 'Aktif')
+ * 6. Set $_SESSION['user'] dengan full user data
+ * 7. Redirect based on role:
+ *    - Admin/Super Admin → admin dashboard
+ *    - User → user dashboard
+ * 
+ * RESET PASSWORD FLOW:
+ * 1. User enters email → verify_email()
+ * 2. Validate email exists dan status Aktif
+ * 3. Generate 6-digit OTP (random, valid 5 minutes)
+ * 4. Store in $_SESSION: reset_otp, reset_email, reset_otp_expired
+ * 5. Send OTP via email (SMTP)
+ * 6. User enters OTP → verify_otp()
+ * 7. Validate OTP match dan not expired
+ * 8. Set $_SESSION['otp_verified'] = true
+ * 9. User enters new password → reset_password()
+ * 10. Update password via AkunModel::updatePassword()
+ * 11. Clear reset session variables
+ * 
+ * SECURITY FEATURES:
+ * - CAPTCHA: Case-insensitive validation (strcasecmp)
+ * - EMAIL DOMAIN: Strict PNJ validation (@stu.pnj.ac.id or @*.pnj.ac.id)
+ * - OTP: 6-digit random, 5-minute expiration
+ * - PASSWORD: Minimum 8 characters (enforced)
+ * - SESSION: Proper session management dengan status check
+ * 
+ * EMAIL VALIDATION PATTERNS:
+ * - Mahasiswa: nama.x@stu.pnj.ac.id
+ * - Dosen/Admin: nama@jurusan.pnj.ac.id or nama@pnj.ac.id
+ * - Regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]*\.?pnj\.ac\.id$/
+ * 
+ * OTP EMAIL FORMAT:
+ * - Subject: "Kode OTP Reset Password - BookEZ"
+ * - Body: Contains 6-digit OTP + 5-minute expiration notice
+ * - From: MAIL_FROM_ADDRESS (bookez.web@gmail.com)
+ * - Headers: UTF-8 encoding
+ * 
+ * AJAX RESPONSES:
+ * All AJAX methods return JSON:
+ * - {success: bool, message: string}
+ * - Content-Type: application/json
+ * - Output buffer cleared before JSON output
+ * 
+ * USER NOTIFICATIONS:
+ * - JavaScript alert() untuk synchronous feedback
+ * - window.location.href untuk navigation after alert
+ * - addslashes() untuk escape dynamic messages
+ * 
+ * USAGE PATTERNS:
+ * - view/login.php: Login form
+ * - assets/js/reset-password.js: AJAX OTP workflow
+ * - config/Email.php: SMTP configuration
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
+/**
+ * Class LoginController - Authentication & Password Reset
+ * 
+ * @property AkunModel $model Model untuk account operations
+ */
 class LoginController
 {
+    /**
+     * AkunModel instance untuk database operations
+     * @var AkunModel
+     */
     private AkunModel $model;
 
+    /**
+     * Constructor - Initialize AkunModel
+     */
     public function __construct()
     {
         $this->model = new AkunModel();
     }
 
+    /**
+     * Index Action - Display login form
+     * 
+     * @return void
+     */
     public function index()
     {
         $this->renderLoginView();

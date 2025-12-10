@@ -1,8 +1,114 @@
-// booking-list.js - Admin Booking List dengan Modal Check-in
+/**
+ * ============================================================================
+ * BOOKING-LIST.JS - Admin Booking List dengan Modal Check-in
+ * ============================================================================
+ * 
+ * Module untuk menangani admin booking list page dengan check-in functionality:
+ * - Open check-in modal untuk booking internal
+ * - Display booking info untuk booking external (no check-in needed)
+ * - Individual anggota check-in via AJAX
+ * - Hari H validation (check-in hanya bisa on booking date)
+ * - Render modal dengan anggota list dan check-in status
+ * 
+ * FUNGSI UTAMA:
+ * 1. MODAL CHECK-IN
+ *    - openCheckinModal(idBooking): Fetch booking detail via AJAX
+ *    - closeCheckinModal(): Hide modal dan reset state
+ *    - renderCheckinModal(data): Populate modal dengan booking data
+ * 
+ * 2. HARI H VALIDATION
+ *    - Check current date vs booking date
+ *    - Alert if not hari H (tanggal booking)
+ *    - Prevent check-in before or after booking date
+ * 
+ * 3. BOOKING TYPE DETECTION
+ *    - Internal booking: Has anggota list → show check-in modal
+ *    - External booking: Has nama_instansi → show info alert (no modal)
+ * 
+ * 4. ANGGOTA CHECK-IN (AJAX)
+ *    - checkinAnggota(idBooking, nomorInduk): Individual check-in
+ *    - Server updates: is_checked_in = 1, waktu_check_in = NOW()
+ *    - Real-time update: Re-fetch booking data dan re-render modal
+ * 
+ * 5. MODAL RENDERING
+ *    - Display: kode_booking, ruangan, tanggal, waktu
+ *    - Anggota list: nama, NIM, role, check-in status
+ *    - Check-in button: enabled/disabled based on status
+ *    - Color coding: green (checked in), red (not checked in)
+ * 
+ * AJAX ENDPOINTS:
+ * 1. Get Booking Check-in:
+ *    - URL: ?page=admin&action=get_booking_checkin&id={id}
+ *    - Response: {success: bool, data: {booking, anggota}, message: string}
+ *    - Used for: Fetch booking details dan anggota list
+ * 
+ * 2. Check-in Anggota:
+ *    - URL: ?page=admin&action=checkin_anggota
+ *    - Method: POST
+ *    - Body: {id_booking, nomor_induk}
+ *    - Response: {success: bool, message: string}
+ *    - Used for: Update anggota check-in status
+ * 
+ * HARI H VALIDATION:
+ * - Today must equal booking date (ignoring time)
+ * - Alert shown if: today < booking date (too early)
+ * - Check-in allowed: today === booking date
+ * - No explicit check for past dates (should be HANGUS/SELESAI)
+ * 
+ * BOOKING EXTERNAL HANDLING:
+ * - Check: nama_instansi !== null AND !== ''
+ * - Display: info alert dengan instansi name, room, date, time
+ * - Message: "Booking eksternal tidak memerlukan check-in"
+ * - Suggestion: Use "Selesai" button untuk complete
+ * 
+ * MODAL STATE:
+ * - currentBookingId: Currently open booking ID
+ * - currentBookingData: Full booking data object
+ * - Reset on modal close
+ * 
+ * TARGET ELEMENTS:
+ * - #modal-checkin: Modal container
+ * - #btn-close-checkin: Close button
+ * - #form-checkin-all: Form container (not used currently)
+ * - #booking-list-data: Data container dengan base path
+ * 
+ * MODAL CONTENT (DYNAMIC):
+ * - Booking header: kode, ruangan, tanggal, waktu
+ * - Anggota table: nama, NIM, role, status, action button
+ * - Check-in buttons: Individual per anggota
+ * - Status badges: "Sudah Check-in" (green) vs "Belum" (red)
+ * 
+ * DATE FORMATTING:
+ * - formatDate(dateString): Convert YYYY-MM-DD to "DD Month YYYY"
+ * - Uses Indonesian locale (toLocaleDateString('id-ID'))
+ * 
+ * ERROR HANDLING:
+ * - AJAX errors: alert dengan error message
+ * - Invalid booking: alert "Gagal memuat data booking"
+ * - Check-in errors: alert dengan server error message
+ * 
+ * USAGE:
+ * - Included in: view/admin/booking_list.php
+ * - Initializes on DOM ready
+ * - Modal opened via button click (event listener in view)
+ * 
+ * INTEGRATION:
+ * - Server: AdminController::get_booking_checkin(), AdminController::checkin_anggota()
+ * - Database: booking, anggota_booking tables
+ * - Auto-update: BookingListModel::autoUpdateHangusStatus() runs on page load
+ * 
+ * @module booking-list
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 // ==================== DATA INITIALIZATION ====================
 
-// Initialize global variables from data attributes
+/**
+ * Initialize global variables from data attributes
+ * 
+ * Reads ASSET_BASE_PATH dari hidden div dengan data attributes.
+ */
 document.addEventListener('DOMContentLoaded', function() {
     const dataContainer = document.getElementById('booking-list-data');
     if (dataContainer) {

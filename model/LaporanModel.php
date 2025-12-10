@@ -1,18 +1,88 @@
 <?php
+/**
+ * ============================================================================
+ * LAPORANMODEL.PHP - Booking Reports & Analytics Model
+ * ============================================================================
+ * 
+ * Model untuk generate laporan peminjaman ruangan dengan berbagai periode.
+ * Menyediakan statistik, trending, dan analytics untuk admin dashboard.
+ * 
+ * FUNGSI UTAMA:
+ * 1. DAILY REPORTS - Laporan harian berdasarkan tanggal
+ * 2. WEEKLY REPORTS - Laporan mingguan dengan aggregasi
+ * 3. MONTHLY REPORTS - Laporan bulanan per minggu
+ * 4. YEARLY REPORTS - Laporan tahunan per bulan
+ * 5. STATISTICS - Total bookings, durasi, completion rates
+ * 6. MOST BOOKED - Top ruangan by booking count
+ * 7. FEEDBACK ANALYTICS - Average ratings per ruangan
+ * 
+ * PERIODE FILTER:
+ * - Harian: Specific date (YYYY-MM-DD)
+ * - Mingguan: Start date + 6 days (Monday-Sunday)
+ * - Bulanan: Month (1-12) + Year (YYYY)
+ * - Tahunan: Year (YYYY)
+ * 
+ * STATISTIK AVAILABLE:
+ * - total_booking: Count of all bookings
+ * - total_durasi: Sum of durasi_penggunaan (in minutes/hours)
+ * - rata_rata_durasi: Average booking duration
+ * - booking_selesai: Count of SELESAI status
+ * - booking_batal: Count of DIBATALKAN status
+ * - booking_hangus: Count of HANGUS status
+ * 
+ * MOST BOOKED ROOMS:
+ * - getMostBookedRooms(): Top rooms by booking frequency
+ * - Period-based: Can filter by date range
+ * - Includes: room details, booking count, feedback ratings
+ * 
+ * FEEDBACK INTEGRATION:
+ * - getAverageRatingByRoom(): Feedback scores per room
+ * - Used for: Room quality trends
+ * - Display: 1-5 scale (emoji representation)
+ * 
+ * DATA AGGREGATION:
+ * - Daily: Individual bookings dengan time slots
+ * - Weekly: Grouped by DATE(tanggal_schedule)
+ * - Monthly: Grouped by WEEK(tanggal_schedule)
+ * - Yearly: Grouped by MONTH(tanggal_schedule)
+ * 
+ * BOOKING DISPLAY:
+ * - nama_peminjam: COALESCE(nama_instansi, ketua.username)
+ * - Shows both user bookings dan external bookings
+ * - Sorted by: tanggal, waktu_mulai
+ * 
+ * CHART DATA FORMAT:
+ * Returns data ready untuk chart libraries:
+ * - Labels: Dates, weeks, months
+ * - Values: Counts, durations
+ * - Suitable for: Chart.js, ApexCharts, etc.
+ * 
+ * USAGE PATTERNS:
+ * - AdminController::laporan() - Display reports page
+ * - Filter controls: dropdown untuk periode selection
+ * - Export: Can be extended untuk PDF/Excel export
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * LaporanModel - Model untuk laporan peminjaman dengan filter periode
- * Filter berdasarkan: harian, mingguan, bulanan, tahunan
+ * Class LaporanModel - Reports & Analytics
  * 
- * Relasi:
- * - booking -> ruangan (N:1) via id_ruangan
- * - booking -> status_booking (N:1) via id_status_booking
- * - booking -> schedule (1:N) via id_booking
+ * @property PDO $pdo Database connection instance
  */
 class LaporanModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

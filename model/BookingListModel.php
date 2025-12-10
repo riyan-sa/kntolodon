@@ -3,18 +3,96 @@
 require_once __DIR__ . '/../config/Email.php';
 
 /**
- * BookingListModel - Model untuk filter dan search booking list (Admin)
- * Menampilkan semua booking (Ruang Umum + Ruang Rapat) untuk admin
+ * ============================================================================
+ * BOOKINGLISTMODEL.PHP - Admin Booking List & Auto-Update Model
+ * ============================================================================
  * 
- * Relasi:
- * - booking -> ruangan (N:1) via id_ruangan
- * - booking -> status_booking (N:1) via id_status_booking
- * - booking -> anggota_booking (1:N) via id_booking (untuk mendapatkan nama user)
+ * Model untuk admin booking list dengan advanced filtering dan auto-update.
+ * Menampilkan SEMUA booking (Ruang Umum + Ruang Rapat) untuk admin management.
+ * Implements automated status updates dan violation tracking.
+ * 
+ * FUNGSI UTAMA:
+ * 1. READ - Fetch all bookings dengan comprehensive details
+ * 2. FILTER - Advanced filtering (room, user, date, status)
+ * 3. AUTO-UPDATE SELESAI - Auto-set SELESAI status after waktu_selesai
+ * 4. AUTO-UPDATE HANGUS - Auto-set HANGUS status if no check-in
+ * 5. CHECK-IN MANAGEMENT - Bulk check-in operations
+ * 6. VIOLATION TRACKING - Track HANGUS violations dan suspensions
+ * 7. EMAIL NOTIFICATIONS - Send suspension alerts
+ * 
+ * CRITICAL AUTO-UPDATE METHODS:
+ * Must be called at controller entry points untuk maintain system integrity:
+ * - autoUpdateSelesaiStatus(): AKTIF → SELESAI (after waktu_selesai + check-in exists)
+ * - autoUpdateHangusStatus(): AKTIF → HANGUS (no check-in after 10 min late)
+ * - Called in: AdminController::booking_list(), BookingController::index()
+ * 
+ * SELESAI LOGIC:
+ * Booking becomes SELESAI if:
+ * - Status = AKTIF
+ * - Current time > waktu_selesai
+ * - At least 1 member checked-in OR booking is external (nama_instansi exists)
+ * 
+ * HANGUS LOGIC:
+ * Booking becomes HANGUS if:
+ * - Status = AKTIF
+ * - Current time > waktu_mulai + 10 minutes
+ * - ALL members NOT checked-in (100% requirement)
+ * - NOT external booking (external bookings cannot be HANGUS)
+ * 
+ * VIOLATION SYSTEM:
+ * - First HANGUS in 30 days → 24-hour booking block
+ * - Third HANGUS in 30 days → 7-day suspension + email notification
+ * - Stored in: pelanggaran_suspensi table
+ * - Email sent to: user's registered email (from akun table)
+ * 
+ * EMAIL NOTIFICATION:
+ * - Trigger: 3rd HANGUS violation (7-day suspension)
+ * - Sender: bookez.web@gmail.com (via SMTP)
+ * - Template: "Anda telah diskors selama 7 hari karena 3 kali HANGUS dalam 30 hari"
+ * - Config: config/Email.php constants
+ * 
+ * CHECK-IN TRACKING:
+ * - Per anggota: anggota_booking.is_checked_in, waktu_check_in
+ * - Bulk check-in: checkInBulk() for group check-ins
+ * - Validation: Cannot check-in after waktu_selesai
+ * 
+ * BOOKING LIST DISPLAY:
+ * - Shows: Ruang Umum (user bookings) + Ruang Rapat (external bookings)
+ * - Name display: COALESCE(nama_instansi, ketua.username)
+ * - Sorting: tanggal DESC, waktu_mulai DESC, id_booking DESC
+ * 
+ * FILTER SUPPORT:
+ * - Room: Filter by id_ruangan or 'all'
+ * - User: Search ketua username atau nama_instansi
+ * - Date: Filter by tanggal_schedule
+ * - Status: Filter by status name (AKTIF/SELESAI/DIBATALKAN/HANGUS) or 'all'
+ * 
+ * USAGE PATTERNS:
+ * - AdminController::booking_list() - Admin booking management
+ * - Called at entry points untuk automated status updates
+ * - Background cron job can also trigger auto-updates
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
+
+/**
+ * Class BookingListModel - Booking List dengan Auto-Update
+ * 
+ * @property PDO $pdo Database connection instance
  */
 class BookingListModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

@@ -1,16 +1,78 @@
 <?php
+/**
+ * ============================================================================
+ * AKUNMODEL.PHP - Account Management Model
+ * ============================================================================
+ * 
+ * Model untuk Complete CRUD operations pada tabel akun (user accounts).
+ * Menangani authentication, registration, profile management, dan user filtering.
+ * 
+ * FUNGSI UTAMA:
+ * 1. CREATE - Register user baru, create admin account
+ * 2. READ - Fetch accounts by various criteria (email, NIM, role, etc.)
+ * 3. UPDATE - Update account info, password, status, role, foto profil
+ * 4. DELETE - Soft delete (set status) atau hard delete
+ * 5. FILTER/SEARCH - Advanced filtering dengan pagination
+ * 6. VALIDATION - Check uniqueness (email, username, NIM)
+ * 7. AUTHENTICATION - Login by email/username/NIM dengan password verify
+ * 8. STATISTICS - Count users by role, status
+ * 
+ * DATABASE TABLE: akun
+ * PRIMARY KEY: nomor_induk (NIM/NIP)
+ * 
+ * RELASI DATABASE:
+ * - akun -> anggota_booking (1:N) via nomor_induk (booking participants)
+ * - akun -> pelanggaran_suspensi (1:N) via nomor_induk (violations/suspensions)
+ * 
+ * ROLE HIERARCHY:
+ * - User: Regular users (Mahasiswa/Dosen/Tenaga Pendidikan)
+ * - Admin: System administrators (manage rooms, bookings, users)
+ * - Super Admin: Full system access (manage admins, system settings)
+ * 
+ * STATUS VALUES:
+ * - Aktif: Account active, can login and use system
+ * - Tidak Aktif: Account pending approval atau disabled
+ * 
+ * EMAIL VALIDATION:
+ * - Mahasiswa: nama.x@stu.pnj.ac.id (single char before @stu)
+ * - Dosen/Admin: nama@jurusan.pnj.ac.id or nama@pnj.ac.id
+ * 
+ * PASSWORD SECURITY:
+ * - Hashed using password_hash() with PASSWORD_DEFAULT (bcrypt)
+ * - Verified using password_verify()
+ * - Minimum 8 characters enforced at controller level
+ * 
+ * USAGE PATTERNS:
+ * - LoginController: authentication methods
+ * - RegisterController: create new user accounts
+ * - AdminController: manage users (activate, edit, delete)
+ * - ProfileController: update user profile data
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * AkunModel - Model untuk CRUD akun dengan filter
+ * Class AkunModel - Account Management dengan comprehensive CRUD operations
  * 
- * Relasi:
- * - akun -> anggota_booking (1:N) via nomor_induk
- * - akun -> pelanggaran_suspensi (1:N) via nomor_induk
+ * @property PDO $pdo Database connection instance
  */
 class AkunModel
 {
+    /**
+     * PDO instance untuk database operations
+     * Initialized via Koneksi singleton
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     * 
+     * Mendapatkan PDO instance dari Koneksi class untuk database access.
+     * Koneksi menggunakan Singleton pattern untuk reuse connection.
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

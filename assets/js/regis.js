@@ -1,4 +1,90 @@
-    // Data mapping jurusan ke prodi
+/**
+ * ============================================================================
+ * REGIS.JS - Registration Form Handler
+ * ============================================================================
+ * 
+ * Module untuk menangani registration form dengan dynamic prodi dropdown
+ * dan email domain validation (PNJ only).
+ * 
+ * FUNGSI UTAMA:
+ * 1. JURUSAN-PRODI MAPPING - Dynamic prodi dropdown based on selected jurusan
+ * 2. EMAIL VALIDATION - Strict PNJ domain validation (client-side)
+ * 3. FORM VALIDATION - Comprehensive validation before submission
+ * 
+ * JURUSAN-PRODI STRUCTURE:
+ * - 7 Jurusan dengan masing-masing prodi list
+ * - Teknik Sipil (4 prodi)
+ * - Teknik Mesin (7 prodi)
+ * - Teknik Elektro (6 prodi)
+ * - Teknik Informatika dan Komputer (3 prodi)
+ * - Akuntansi (7 prodi)
+ * - Administrasi Niaga (4 prodi)
+ * - Teknik Grafika dan Penerbitan (5 prodi)
+ * 
+ * EMAIL VALIDATION PATTERNS:
+ * - MAHASISWA: nama.x@stu.pnj.ac.id
+ *   - Must have single alphanumeric char before @stu
+ *   - Regex: /^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/
+ *   - Example: maulana.ibrahim.a@stu.pnj.ac.id
+ * 
+ * - DOSEN/STAFF: nama@jurusan.pnj.ac.id or nama@pnj.ac.id
+ *   - Must NOT be @stu.pnj.ac.id
+ *   - Regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.pnj\.ac\.id$/
+ *   - Example: euis.oktavianti@tik.pnj.ac.id, admin@pnj.ac.id
+ * 
+ * VALIDATION FLOW:
+ * 1. User selects jurusan → prodi dropdown populated dynamically
+ * 2. User fills form including email
+ * 3. On form submit → client-side email validation
+ * 4. If invalid → show alert dengan error message
+ * 5. If valid → submit to server (RegisterController::submit)
+ * 6. Server performs additional validation (uniqueness, captcha, etc.)
+ * 
+ * PASSWORD POLICY:
+ * - Minimum 8 characters (enforced server-side)
+ * - Password confirmation must match
+ * 
+ * FILE UPLOAD:
+ * - SSKUBACAPNJ: Screenshot KubacaPNJ (untuk mahasiswa validation)
+ * - Optional field
+ * - Max 25MB, image only (JPEG/PNG/WebP)
+ * 
+ * TARGET ELEMENTS:
+ * - #jurusan: Jurusan select dropdown
+ * - #prodi: Prodi select dropdown (dynamic)
+ * - #email: Email input field
+ * - #formRegister: Registration form
+ * 
+ * ERROR MESSAGES:
+ * - Invalid mahasiswa email: "Email mahasiswa harus menggunakan format..."
+ * - Invalid dosen email: "Email dosen/staff harus menggunakan domain..."
+ * - Generic invalid: "Email harus menggunakan domain PNJ..."
+ * 
+ * USAGE:
+ * - Included in: view/register.php
+ * - Runs on DOM ready
+ * - Prevents form submission if validation fails
+ * 
+ * INTEGRATION:
+ * - Client-side validation (this file)
+ * - Server-side validation (RegisterController::submit)
+ * - Database insertion (AkunModel::register)
+ * 
+ * @module regis
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
+
+    // ==================== JURUSAN-PRODI DATA MAPPING ====================
+    
+    /**
+     * Data mapping jurusan ke prodi
+     * 
+     * Nested object struktur dengan jurusan sebagai keys dan array prodi sebagai values.
+     * Digunakan untuk populate prodi dropdown dynamically based on selected jurusan.
+     * 
+     * @type {Object.<string, string[]>}
+     */
     const prodiData = {
       'Teknik Sipil': [
         'D-III Konstruksi Sipil',

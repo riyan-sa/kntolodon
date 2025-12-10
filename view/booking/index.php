@@ -1,4 +1,226 @@
 <?php
+/**
+ * ============================================================================
+ * BOOKING/INDEX.PHP - Room Booking Form
+ * ============================================================================
+ * 
+ * Complex booking form untuk create new room reservation.
+ * Supports group booking dengan multiple participants (anggota).
+ * 
+ * FEATURES:
+ * 1. ROOM INFORMATION DISPLAY
+ *    - Foto ruangan (or placeholder)
+ *    - Nama ruangan
+ *    - Jenis ruangan (Ruang Umum / Ruang Rapat)
+ *    - Kapasitas: min - max orang
+ *    - Status ruangan badge
+ *    - Deskripsi
+ *    - Tata tertib (rules)
+ * 
+ * 2. BOOKING DATETIME INPUTS
+ *    - Tanggal: Date picker (min = today)
+ *    - Waktu Mulai: Time picker
+ *    - Waktu Selesai: Time picker
+ *    - Validation: Past datetime prevention
+ *    - Validation: End time > Start time
+ * 
+ * 3. TIMELINE CONFLICT DETECTION (AJAX)
+ *    - Shows occupied time slots for selected date
+ *    - Visual timeline dengan booking blocks
+ *    - Real-time conflict warning
+ *    - Endpoint: ?page=booking&action=get_booked_timeslots
+ *    - Auto-updates on date change
+ * 
+ * 4. GROUP BOOKING (Anggota Management)
+ *    - Ketua: Auto-filled dengan current user (readonly)
+ *    - Anggota: Add multiple participants
+ *    - NIM search: Auto-fill user data via AJAX
+ *    - Endpoint: ?page=booking&action=get_user_by_nim
+ *    - Remove anggota: Delete button per row
+ *    - Min participants: Room's minimal_kapasitas_ruangan
+ *    - Max participants: Room's maksimal_kapasitas_ruangan
+ * 
+ * 5. CAPTCHA VERIFICATION
+ *    - Same as login/register
+ *    - Image: view/components/captcha.php
+ *    - Refresh functionality
+ *    - Case-insensitive validation
+ * 
+ * 6. FORM VALIDATION (13 Steps)
+ *    - Step 1: Check tanggal filled
+ *    - Step 2: Validate tanggal not in past
+ *    - Step 3: Check waktu_mulai filled
+ *    - Step 4: Check waktu_selesai filled
+ *    - Step 5: Validate waktu_selesai > waktu_mulai
+ *    - Step 6: Validate not past datetime
+ *    - Step 7: Check CAPTCHA filled
+ *    - Step 8: Validate CAPTCHA correct
+ *    - Step 9: Check participant count >= min capacity
+ *    - Step 10: Check participant count <= max capacity
+ *    - Step 11: Validate no duplicate NIMs
+ *    - Step 12: Check user has no active booking
+ *    - Step 13: Validate time slot available (no conflicts)
+ * 
+ * DATA FROM CONTROLLER (BookingController::index()):
+ * - $ruangan (array): Selected room details
+ *   * Fetched by id_ruangan from $_GET parameter
+ *   * Contains: nama, jenis, kapasitas, status, deskripsi, tata_tertib, foto
+ * 
+ * ROOM DATA STRUCTURE:
+ * $ruangan = [
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'jenis_ruangan' => string ('Ruang Umum', 'Ruang Rapat'),
+ *   'minimal_kapasitas_ruangan' => int,
+ *   'maksimal_kapasitas_ruangan' => int,
+ *   'status_ruangan' => string ('Tersedia', 'Sedang Digunakan', 'Tidak Tersedia'),
+ *   'deskripsi' => string|null,
+ *   'tata_tertib' => string|null,
+ *   'foto_ruangan' => string|null (path)
+ * ];
+ * 
+ * FORM STRUCTURE:
+ * - Hidden: id_ruangan (passed from dashboard)
+ * - Input: tanggal (type="date", min=today)
+ * - Input: waktu_mulai (type="time")
+ * - Input: waktu_selesai (type="time")
+ * - Timeline: Visual conflict detection (populated by JavaScript)
+ * - Ketua: Readonly (current user's NIM, name, jurusan, prodi)
+ * - Anggota: Dynamic rows (NIM input + auto-filled data)
+ * - CAPTCHA: Image + text input
+ * - Submit button: "Booking Sekarang"
+ * 
+ * FORM SUBMISSION:
+ * - Action: ?page=booking&action=buat_booking
+ * - Method: POST
+ * - Controller: BookingController::buat_booking()
+ * - Fields:
+ *   * id_ruangan (hidden)
+ *   * tanggal
+ *   * waktu_mulai
+ *   * waktu_selesai
+ *   * nim_ketua (readonly, from session)
+ *   * nim_anggota[] (array of NIMs)
+ *   * captcha
+ * 
+ * AJAX ENDPOINTS:
+ * 1. GET USER BY NIM
+ *    - URL: ?page=booking&action=get_user_by_nim&nim={nim}
+ *    - Method: GET
+ *    - Returns: {"success": bool, "data": {...}, "message": string}
+ *    - Data fields: nomor_induk, username, jurusan, prodi
+ * 
+ * 2. GET BOOKED TIMESLOTS
+ *    - URL: ?page=booking&action=get_booked_timeslots&id_ruangan={id}&tanggal={date}
+ *    - Method: GET
+ *    - Returns: [{"kode_booking": string, "waktu_mulai": string, "waktu_selesai": string}, ...]
+ *    - Used for timeline conflict detection
+ * 
+ * ANGGOTA MANAGEMENT:
+ * - Add button: Adds new row dengan NIM input
+ * - NIM input: Triggers AJAX on blur/enter
+ * - Auto-fill: Populates nama, jurusan, prodi fields
+ * - Remove button: Deletes row (validates min capacity)
+ * - Validation: Check participant count within room capacity range
+ * 
+ * PARTICIPANT COUNT:
+ * - Ketua: Always included (1 person)
+ * - Anggota: Additional participants
+ * - Total: Ketua + Anggota count
+ * - Must satisfy: minimal_kapasitas <= total <= maksimal_kapasitas
+ * - Example: Room capacity 3-10, valid totals: 3, 4, 5, ..., 10
+ * 
+ * TARGET ELEMENTS:
+ * - #mainForm: Main booking form
+ * - #tanggal: Date input
+ * - #waktu_mulai: Start time input
+ * - #waktu_selesai: End time input
+ * - #timeline: Timeline container for conflict visualization
+ * - #anggotaContainer: Container for anggota rows
+ * - #btnTambahAnggota: Add anggota button
+ * - .anggota-row: Individual anggota rows
+ * - .btn-remove-anggota: Remove anggota buttons
+ * - #captchaImage: CAPTCHA image
+ * - #captcha: CAPTCHA text input
+ * - [data-action="back-to-dashboard"]: Back button
+ * 
+ * JAVASCRIPT:
+ * - assets/js/booking.js: Form interactions, AJAX, validation, timeline
+ * - Functions:
+ *   * loadBookedTimeslots(): Fetch and display timeline
+ *   * addAnggotaRow(): Add new participant row
+ *   * removeAnggotaRow(): Remove participant row
+ *   * searchUserByNim(): AJAX user lookup
+ *   * validateForm(): 13-step validation
+ *   * checkTimeOverlap(): Conflict detection algorithm
+ * 
+ * VALIDATION FLOW:
+ * 1. Client-side: JavaScript validates before submit
+ * 2. Server-side: BookingController::buat_booking() re-validates
+ * 3. Business rules:
+ *    - One active booking per user
+ *    - Participant count within room capacity
+ *    - No time slot conflicts
+ *    - No past datetime bookings
+ *    - All participants must exist in DB
+ *    - CAPTCHA must be correct
+ * 
+ * SUCCESS FLOW:
+ * 1. Validate all inputs
+ * 2. Create booking record (status: AKTIF)
+ * 3. Generate kode_booking: BK{timestamp}{random}
+ * 4. Insert anggota_booking records (ketua + anggota)
+ * 5. Mark ketua as is_ketua = 1
+ * 6. Redirect to: ?page=booking&action=kode_booking&kode={kode_booking}
+ * 
+ * ERROR HANDLING:
+ * - Past datetime → alert "Tidak bisa booking di waktu lampau!"
+ * - Invalid time range → alert "Waktu selesai harus lebih dari waktu mulai!"
+ * - Wrong CAPTCHA → alert "Kode CAPTCHA salah!"
+ * - Capacity violation → alert "Jumlah peserta harus antara X-Y orang!"
+ * - Has active booking → alert "Anda sudah memiliki booking aktif!"
+ * - Time conflict → alert "Jadwal bentrok dengan booking lain!"
+ * - All errors via JavaScript alert() from controller
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Single column, stacked layout
+ * - Tablet (md): Two-column layout (room info + form)
+ * - Desktop: Wide form dengan side-by-side inputs
+ * - Timeline: Scrollable horizontal on mobile
+ * 
+ * CSS:
+ * - External: assets/css/booking.css
+ * - Font Awesome: CDN for icons (legacy, consider removing)
+ * - Timeline styling: Custom visual blocks
+ * - Form inputs: Tailwind utility classes
+ * 
+ * ROUTING:
+ * - Entry URL: ?page=booking&action=index&id_ruangan={id}
+ * - From: Dashboard room card "Booking Sekarang" button
+ * - Submit: ?page=booking&action=buat_booking
+ * - Success: ?page=booking&action=kode_booking&kode={kode}
+ * - Cancel: Back to dashboard
+ * 
+ * SECURITY:
+ * - CAPTCHA prevents bots
+ * - Session check: User must be logged in
+ * - NIM validation: Must exist in database
+ * - Time validation: Prevents past bookings
+ * - Conflict check: Prevents double bookings
+ * - XSS prevention: htmlspecialchars() on outputs
+ * 
+ * INTEGRATION:
+ * - Controller: BookingController (index, buat_booking, get_user_by_nim, get_booked_timeslots)
+ * - Model: BookingModel (create, hasActiveBooking)
+ * - Model: ScheduleModel (isTimeSlotAvailable)
+ * - Model: AkunModel (getByNomorInduk)
+ * - Model: AnggotaBookingModel (addAnggota)
+ * - Database: booking, anggota_booking, schedule, akun tables
+ * 
+ * @package BookEZ
+ * @subpackage Views\Booking
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
 	session_start();
 }

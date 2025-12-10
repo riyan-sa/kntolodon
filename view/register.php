@@ -1,4 +1,178 @@
 <?php
+/**
+ * ============================================================================
+ * REGISTER.PHP - Registration Page View
+ * ============================================================================
+ * 
+ * Form pendaftaran untuk user baru (Mahasiswa, Dosen, Tenaga Pendidikan).
+ * Includes PNJ email validation dan photo upload untuk mahasiswa.
+ * 
+ * FITUR:
+ * 1. USER INFORMATION
+ *    - Username/Nama: Display name (required)
+ *    - Nomor Induk: NIM (mahasiswa) or NIP (dosen/staff) (required)
+ *    - Email: PNJ domain email (required, strict validation)
+ *    - Password: Min 8 characters (required)
+ * 
+ * 2. MAHASISWA-SPECIFIC FIELDS
+ *    - Jurusan: 7 options (Teknik Sipil, Mesin, Elektro, TIK, Akuntansi, Adm Niaga, Grafika)
+ *    - Program Studi: Dynamically populated based on selected jurusan
+ *    - Validasi Mahasiswa: Screenshot KubacaPNJ (image upload, required for mahasiswa)
+ * 
+ * 3. DOSEN/STAFF FIELDS
+ *    - Leave Jurusan empty ("-- Kosongkan jika Dosen/Tenaga Pendidik --")
+ *    - Leave Prodi empty
+ *    - NO validasi_mahasiswa upload
+ * 
+ * 4. EMAIL DOMAIN VALIDATION (CRITICAL)
+ *    - Mahasiswa: MUST use @stu.pnj.ac.id (e.g., nama.x@stu.pnj.ac.id)
+ *    - Dosen/Staff: MUST use @*.pnj.ac.id or @pnj.ac.id (NOT @stu.pnj.ac.id)
+ *    - Pattern (Mahasiswa): /^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/
+ *    - Pattern (Dosen): Valid @*.pnj.ac.id or @pnj.ac.id AND NOT @stu.pnj.ac.id
+ *    - Validated both client-side (JS) and server-side (PHP)
+ * 
+ * 5. JURUSAN-PRODI MAPPING (JavaScript)
+ *    - 7 Jurusan dengan total 36 Program Studi
+ *    - Dynamic <select> population based on jurusan selection
+ *    - See assets/js/regis.js for complete mapping
+ * 
+ * 6. CAPTCHA VERIFICATION
+ *    - Same as login: view/components/captcha.php
+ *    - Refresh functionality via assets/js/captcha.js
+ *    - Case-insensitive validation
+ * 
+ * 7. PHOTO UPLOAD (Mahasiswa Only)
+ *    - Field: validasi_mahasiswa
+ *    - Purpose: Screenshot KubacaPNJ untuk verifikasi status mahasiswa
+ *    - Required: YES (for mahasiswa)
+ *    - Format: Image (JPEG, PNG, WebP)
+ *    - Max size: 25MB (server-side enforcement)
+ *    - Storage: assets/uploads/images/
+ * 
+ * FORM FIELDS:
+ * - Username (text, required): Display name
+ * - NomorInduk (text, required): NIM/NIP
+ * - Email (email, required): PNJ domain email
+ * - Jurusan (select, optional): For mahasiswa only
+ * - Prodi (select, optional): Depends on jurusan
+ * - validasi_mahasiswa (file, conditional): Screenshot KubacaPNJ (mahasiswa only)
+ * - Password (password, required): Min 8 chars
+ * - captcha (text, required): CAPTCHA code
+ * 
+ * FORM SUBMISSION:
+ * - Action: index.php?page=register&action=submit
+ * - Method: POST
+ * - Enctype: multipart/form-data (for file upload)
+ * - Controller: RegisterController::submit()
+ * 
+ * VALIDATION (CLIENT-SIDE - assets/js/regis.js):
+ * 1. Email domain check (mahasiswa vs dosen/staff)
+ * 2. Password length >= 8 characters
+ * 3. Required fields check
+ * 4. File type check (image only)
+ * 
+ * VALIDATION (SERVER-SIDE - RegisterController):
+ * 1. Email format and PNJ domain validation
+ * 2. Email uniqueness check (no duplicates)
+ * 3. Nomor Induk uniqueness check
+ * 4. Password min 8 characters
+ * 5. File validation: MIME type, size (max 25MB)
+ * 6. CAPTCHA verification
+ * 7. Jurusan-Prodi consistency (if mahasiswa)
+ * 
+ * REGISTRATION FLOW:
+ * - Fill form → Submit → RegisterController::submit()
+ * - Validate all inputs
+ * - Upload validasi_mahasiswa (if provided)
+ * - Insert into akun table:
+ *   * role: 'User'
+ *   * status: 'Tidak Aktif' (awaits admin activation)
+ *   * foto_profil: NULL (added later via profile page)
+ * - Show success alert: "Registrasi berhasil! Mohon tunggu aktivasi akun..."
+ * - Redirect to login page
+ * - Admin activates account via Member List page
+ * 
+ * ACCOUNT ACTIVATION:
+ * - New accounts start with status 'Tidak Aktif'
+ * - Admin reviews registrations in Member List
+ * - Admin verifies validasi_mahasiswa screenshot
+ * - Admin changes status to 'Aktif'
+ * - User can then login
+ * 
+ * ERROR HANDLING:
+ * - Email already exists → alert + reload
+ * - Nomor Induk already exists → alert + reload
+ * - Invalid email domain → alert + reload
+ * - Password too short → alert + reload
+ * - Wrong CAPTCHA → alert + reload
+ * - File upload error → alert + reload
+ * - All errors via JavaScript alert() from controller
+ * 
+ * TARGET ELEMENTS:
+ * - #username: Username input
+ * - #nomor_induk: NIM/NIP input
+ * - #email: Email input
+ * - #jurusan: Jurusan select
+ * - #prodi: Program Studi select (populated dynamically)
+ * - #validasi_mahasiswa: File input for screenshot
+ * - #password: Password input
+ * - #captchaImage: CAPTCHA image
+ * - #refresh-captcha: Refresh button
+ * - #formRegister: Main form element
+ * 
+ * JAVASCRIPT:
+ * - assets/js/regis.js: Form validation, jurusan-prodi mapping, email validation
+ * - assets/js/captcha.js: CAPTCHA refresh functionality
+ * 
+ * JURUSAN-PRODI MAPPING (7 Jurusan):
+ * 1. Teknik Sipil (5 prodi)
+ * 2. Teknik Mesin (5 prodi)
+ * 3. Teknik Elektro (7 prodi)
+ * 4. Teknik Informatika dan Komputer (7 prodi)
+ * 5. Akuntansi (4 prodi)
+ * 6. Administrasi Niaga (6 prodi)
+ * 7. Teknik Grafika dan Penerbitan (2 prodi)
+ * Total: 36 Program Studi
+ * 
+ * LAYOUT STRUCTURE:
+ * - Left column (lg:w-2/5): Registration form
+ *   - Title: "Pendaftaran Book EZ"
+ *   - All input fields
+ *   - CAPTCHA section
+ *   - Submit button ("REGISTER")
+ *   - Login link
+ * - Right column (lg:w-3/5): Decorative SVG (hidden on mobile)
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Full width single column
+ * - Desktop (lg): Split 2/5 form, 3/5 decorative
+ * - Padding: p-12 mobile, lg:p-20 desktop
+ * - Form max-width: max-w-sm
+ * 
+ * STYLING:
+ * - Input fields: Border-bottom style
+ * - Required fields: Red asterisk (*)
+ * - Optional labels: Gray text "(Khusus Mahasiswa)"
+ * - Buttons: Rounded-full (pill-shaped)
+ * - Submit button: Blue bg, hover:bg-blue-700
+ * 
+ * SECURITY:
+ * - Password hidden (type="password")
+ * - CAPTCHA prevents bots
+ * - Email validation prevents fake emails
+ * - File type validation prevents malicious uploads
+ * - Admin approval required before account activation
+ * 
+ * INTEGRATION:
+ * - Controller: RegisterController (submit method)
+ * - Model: AkunModel (create, isEmailExists, isNomorIndukExists)
+ * - Database: akun table
+ * - Upload dir: assets/uploads/images/
+ * 
+ * @package BookEZ
+ * @subpackage Views
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }

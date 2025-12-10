@@ -1,12 +1,157 @@
 <?php
+/**
+ * ============================================================================
+ * DASHBOARDCONTROLLER.PHP - User Dashboard Controller
+ * ============================================================================
+ * 
+ * Controller untuk user dashboard dengan room browsing, active booking display, dan feedback.
+ * Terintegrasi dengan auto-update status system untuk real-time booking states.
+ * 
+ * FUNGSI UTAMA:
+ * 1. INDEX - Main dashboard dengan room list dan active booking status
+ * 2. SELESAI BOOKING - Mark active booking as complete (ketua only)
+ * 3. FEEDBACK - Display feedback form after booking completion
+ * 4. SUBMIT FEEDBACK - Process feedback submission
+ * 
+ * ROUTES:
+ * - ?page=dashboard&action=index - Main dashboard (default)
+ * - ?page=dashboard&action=selesai_booking - Mark booking complete (POST)
+ * - ?page=dashboard&action=feedback - Feedback form (after selesai_booking)
+ * - ?page=dashboard&action=submit_feedback - Submit feedback (POST)
+ * 
+ * DASHBOARD BEHAVIOR:
+ * - Admin/Super Admin: Redirect to admin dashboard (?page=admin)
+ * - User: Show room list + active booking card
+ * - Auto-update booking statuses on load (HANGUS → SELESAI → room status)
+ * - Display suspend alert if user has active suspension
+ * 
+ * AUTO-UPDATE SEQUENCE (CRITICAL ORDER):
+ * 1. autoUpdateHangusStatus() - Check bookings tanpa check-in >10min late → HANGUS
+ * 2. autoUpdateSelesaiStatus() - Check bookings with check-in past waktu_selesai → SELESAI
+ * 3. autoUpdateRoomStatus() - Update room availability based on active bookings
+ * 
+ * ORDER IMPORTANT: HANGUS must run before SELESAI to prevent status conflicts
+ * 
+ * ACTIVE BOOKING DISPLAY:
+ * - Show if user has booking with status AKTIF (as ketua OR anggota)
+ * - Display: kode_booking, ruangan, tanggal, waktu, check-in status
+ * - Show "Selesaikan Booking" button if:
+ *   - User is ketua
+ *   - Booking date is today (hari H)
+ *   - Current time >= waktu_mulai
+ *   - Current time <= waktu_selesai
+ * 
+ * ROOM LIST:
+ * - Filter: Only 'Ruang Umum' (exclude 'Ruang Rapat' for admins)
+ * - Dynamic availability: getAllWithDynamicAvailability()
+ *   - 'Tersedia' if no active booking at current time
+ *   - 'Sedang Digunakan' if has active booking now
+ * - Each room shows: foto, nama, kapasitas, fasilitas, status
+ * 
+ * SELESAI BOOKING WORKFLOW:
+ * 1. POST validation: Must be POST request
+ * 2. Session check: User must be logged in
+ * 3. Booking validation: Must exist
+ * 4. Ownership check: User must be ketua
+ * 5. TIME CONSTRAINTS:
+ *    - Can only complete on booking date (hari H)
+ *    - Current time >= waktu_mulai
+ *    - Current time <= waktu_selesai
+ *    - Cannot complete before waktu_mulai (show minutes remaining)
+ *    - Cannot complete if past waktu_selesai (show error)
+ * 6. Update status to SELESAI (id=2)
+ * 7. Store booking ID in session: $_SESSION['feedback_booking_id']
+ * 8. Redirect to feedback page
+ * 
+ * FEEDBACK WORKFLOW:
+ * 1. Check session for feedback_booking_id
+ * 2. Validate booking exists and status is SELESAI
+ * 3. Check if feedback already submitted (hasFeedback)
+ * 4. Display feedback form with rating options (1 or 5)
+ * 5. User submits rating + kritik_saran (text feedback)
+ * 6. Validate:
+ *    - User must be ketua
+ *    - Rating must be 1 or 5
+ *    - No duplicate feedback
+ * 7. Save to feedback table
+ * 8. Clear feedback_booking_id from session
+ * 9. Redirect to dashboard with success message
+ * 
+ * FEEDBACK FORM:
+ * - Rating: 1 (Sedih/Poor) or 5 (Senyum/Excellent)
+ * - Kritik & Saran: Combined text field (required)
+ * - Only visible to ketua after selesai_booking
+ * 
+ * SUSPEND NOTIFICATION:
+ * - Display alert if user has active pelanggaran_suspensi
+ * - Message includes: suspend end date and reason
+ * - Check via BookingModel::checkSuspendStatus()
+ * 
+ * TIMEZONE:
+ * - Set to Asia/Jakarta (WIB) in constructor
+ * - All datetime comparisons use WIB timezone
+ * 
+ * BUSINESS RULES:
+ * - SELESAI BOOKING: Only on hari H, between waktu_mulai and waktu_selesai
+ * - FEEDBACK: One-time per booking, only by ketua
+ * - ADMIN REDIRECT: Admins cannot access user dashboard
+ * - REAL-TIME STATUS: Auto-update runs on every page load
+ * 
+ * SECURITY FEATURES:
+ * - Session validation untuk semua actions
+ * - Ownership check: Only ketua can complete booking
+ * - Time validation: Strict time window enforcement
+ * - Duplicate feedback prevention
+ * - SQL injection prevention: Prepared statements in models
+ * 
+ * USAGE PATTERNS:
+ * - view/dashboard.php: Main dashboard layout
+ * - view/feedback.php: Feedback form
+ * - assets/js/dashboard.js: Room modal interactions
+ * - assets/js/feedback.js: Rating selection
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
+/**
+ * Class DashboardController - User Dashboard Handler
+ * 
+ * @property RuanganModel $ruanganModel Room data and availability
+ * @property BookingModel $bookingModel Booking operations
+ * @property FeedbackModel $feedbackModel Feedback operations
+ * @property BookingListModel $bookingListModel Auto-update methods
+ */
 class DashboardController
 {
+    /**
+     * RuanganModel instance untuk room data
+     * @var RuanganModel
+     */
     private RuanganModel $ruanganModel;
+    
+    /**
+     * BookingModel instance untuk booking operations
+     * @var BookingModel
+     */
     private BookingModel $bookingModel;
+    
+    /**
+     * FeedbackModel instance untuk feedback operations
+     * @var FeedbackModel
+     */
     private FeedbackModel $feedbackModel;
+    
+    /**
+     * BookingListModel instance untuk auto-update methods
+     * @var BookingListModel
+     */
     private BookingListModel $bookingListModel;
 
+    /**
+     * Constructor - Initialize models, session, and timezone
+     */
     public function __construct()
     {
         if (session_status() === PHP_SESSION_NONE) {

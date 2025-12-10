@@ -1,19 +1,83 @@
 <?php
+/**
+ * ============================================================================
+ * BOOKINGMODEL.PHP - User Booking Management Model
+ * ============================================================================
+ * 
+ * Model untuk CRUD operations pada booking user (Ruang Umum).
+ * Menangani pembuatan booking, manajemen anggota, check-in, reschedule, dan validasi.
+ * 
+ * FUNGSI UTAMA:
+ * 1. CREATE - Buat booking baru dengan ketua dan anggota
+ * 2. READ - Fetch bookings dengan berbagai filter (by user, room, date, status)
+ * 3. UPDATE - Update booking data, status, check-in anggota
+ * 4. DELETE - Batalkan atau hapus booking (soft/hard delete)
+ * 5. FILTER - Advanced filtering dengan pagination
+ * 6. VALIDATION - Check active booking, booking block, suspend status
+ * 
+ * DATABASE TABLE: booking
+ * PRIMARY KEY: id_booking (auto-increment)
+ * FOREIGN KEYS:
+ * - id_ruangan → ruangan.id_ruangan (room being booked)
+ * - id_status_booking → status_booking.id_status_booking (AKTIF/SELESAI/DIBATALKAN/HANGUS)
+ * 
+ * RELATED TABLES:
+ * - anggota_booking: Many-to-many join (booking ↔ akun)
+ * - schedule: Booking time slots (1:N)
+ * - feedback: Post-booking feedback (1:1)
+ * 
+ * RELASI DATABASE:
+ * - booking -> ruangan (N:1) via id_ruangan
+ * - booking -> status_booking (N:1) via id_status_booking  
+ * - booking -> anggota_booking (1:N) via id_booking (booking participants)
+ * - booking -> schedule (1:N) via id_booking (time slots, reschedules)
+ * - booking -> feedback (1:1) via id_booking (post-completion feedback)
+ * 
+ * BUSINESS RULES:
+ * 1. ONE ACTIVE BOOKING PER USER - User can only have 1 AKTIF booking at a time
+ * 2. CAPACITY VALIDATION - Participant count between room min-max capacity
+ * 3. ROOM TYPE - Only 'Ruang Umum' for user bookings ('Ruang Rapat' for external)
+ * 4. KETUA REQUIRED - Booking must have exactly 1 ketua (logged-in user)
+ * 5. CHECK-IN TRACKING - Track check-in per anggota with waktu_check_in
+ * 6. VIOLATION SYSTEM - HANGUS status triggers 24h block or 7-day suspension
+ * 
+ * STATUS LIFECYCLE:
+ * - AKTIF (1): Active booking, can check-in
+ * - SELESAI (2): Completed (auto-set after waktu_selesai)
+ * - DIBATALKAN (3): Cancelled by user
+ * - HANGUS (4): No check-in within 10 minutes of waktu_mulai (auto-set)
+ * 
+ * KODE BOOKING:
+ * - Format: 7-character alphanumeric uppercase (e.g., 'A3F9B2C')
+ * - Generated via generateKodeBooking() dengan uniqueness check
+ * - Used for booking identification dan confirmation
+ * 
+ * USAGE PATTERNS:
+ * - BookingController: create, view, cancel, reschedule user bookings
+ * - DashboardController: display active bookings
+ * - AdminController: view all bookings, manage check-ins
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * BookingModel - Model untuk CRUD booking user (Ruang Umum)
- * User yang login menjadi ketua, bisa menambahkan anggota dengan nomor_induk dan username
+ * Class BookingModel - User Booking Management dengan comprehensive operations
  * 
- * Relasi:
- * - booking -> ruangan (N:1) via id_ruangan
- * - booking -> status_booking (N:1) via id_status_booking
- * - booking -> anggota_booking (1:N) via id_booking
- * - booking -> schedule (1:N) via id_booking
+ * @property PDO $pdo Database connection instance
  */
 class BookingModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

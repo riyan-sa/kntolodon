@@ -1,4 +1,208 @@
 <?php
+/**
+ * ============================================================================
+ * ADMIN/BOOKING_LIST.PHP - Booking List & Check-in Management
+ * ============================================================================
+ * 
+ * Comprehensive booking management page untuk Admin & Super Admin.
+ * Features: List all bookings, filters, check-in management, status updates.
+ * 
+ * ACCESS CONTROL:
+ * - Admin & Super Admin only
+ * - Blocks regular User access
+ * 
+ * FEATURES:
+ * 1. BOOKING LIST TABLE
+ *    - Columns: No, Nama, Ruangan, Tanggal, Jam, Status, Anggota, Aksi
+ *    - Paginated: 10 bookings per page
+ *    - Color-coded status badges
+ *    - Mixed booking types: Regular user bookings + External bookings
+ * 
+ * 2. FILTER SYSTEM
+ *    - Ruangan: Dropdown (all rooms + "Semua Ruangan")
+ *    - Nama: Text search (ketua or instansi name)
+ *    - Tanggal: Date picker (exact match)
+ *    - Status: Dropdown (AKTIF, SELESAI, DIBATALKAN, HANGUS, Semua)
+ *    - Filters persist across pagination
+ * 
+ * 3. CHECK-IN MODAL
+ *    - Triggered by "Check-in" button in Aksi column
+ *    - Shows list of booking members (anggota)
+ *    - Individual check-in buttons per member
+ *    - Check-in timestamp recording
+ *    - Hari H validation (can only check-in on booking date)
+ * 
+ * 4. BOOKING TYPES DETECTION
+ *    - Regular booking: Has ketua & anggota (shows member count)
+ *    - External booking: Has nama_instansi (shows organization name)
+ *    - Table adapts display based on booking type
+ * 
+ * 5. STATUS BADGES
+ *    - AKTIF: Green (bg-green-100 text-green-800)
+ *    - SELESAI: Blue (bg-blue-100 text-blue-800)
+ *    - DIBATALKAN: Gray (bg-gray-100 text-gray-800)
+ *    - HANGUS: Red (bg-red-100 text-red-800)
+ * 
+ * DATA FROM CONTROLLER:
+ * - $bookings (array): All bookings dengan filters applied
+ * - $ruanganList (array): All rooms for filter dropdown
+ * - $paginationData (array): Pagination info
+ * - Filter values: $filterRuang, $filterNama, $filterTanggal, $filterStatus
+ * 
+ * BOOKING DATA STRUCTURE:
+ * $booking = [
+ *   'id_booking' => int,
+ *   'kode_booking' => string,
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'tanggal' => string (YYYY-MM-DD),
+ *   'waktu_mulai' => string (HH:MM:SS),
+ *   'waktu_selesai' => string (HH:MM:SS),
+ *   'id_status' => int,
+ *   'nama_status' => string,
+ *   'ketua_nama' => string|null (for regular bookings),
+ *   'nama_instansi' => string|null (for external bookings),
+ *   'total_anggota' => int (for regular bookings),
+ *   'check_in_count' => int (for regular bookings)
+ * ];
+ * 
+ * FILTER FORM:
+ * - Method: GET
+ * - Action: index.php?page=admin&action=booking_list
+ * - Hidden fields: page=admin, action=booking_list
+ * - Maintains: Filters + pagination state
+ * 
+ * CHECK-IN MODAL STRUCTURE:
+ * - Triggered: Click "Check-in" button (data-kode-booking attribute)
+ * - AJAX endpoint: ?page=admin&action=get_booking_anggota&kode={kode}
+ * - Returns: List of members dengan check-in status
+ * - Check-in action: POST to ?page=admin&action=checkin_anggota
+ * 
+ * CHECK-IN LOGIC:
+ * 1. Validate: Today is booking date (hari H check)
+ * 2. Check: Member not already checked in
+ * 3. Update: anggota_booking.is_checked_in = 1
+ * 4. Record: anggota_booking.waktu_check_in = NOW()
+ * 5. Return: Success status
+ * 6. Update modal: Show checkmark icon
+ * 
+ * HARI H VALIDATION:
+ * - Check-in only allowed on booking date
+ * - Formula: date('Y-m-d') === $booking['tanggal']
+ * - Before date: "Check-in belum dibuka"
+ * - After date: "Check-in sudah ditutup"
+ * - Enforced both client-side (button disable) and server-side
+ * 
+ * ANGGOTA DATA (Modal):
+ * $anggota = [
+ *   'nomor_induk' => string,
+ *   'nama' => string,
+ *   'is_ketua' => int (1 = ketua, 0 = anggota biasa),
+ *   'is_checked_in' => int (1 = sudah check-in, 0 = belum),
+ *   'waktu_check_in' => string|null (YYYY-MM-DD HH:MM:SS)
+ * ];
+ * 
+ * TABLE STRUCTURE:
+ * - No: Sequential number (pagination-aware)
+ * - Nama: Ketua name (regular) or Instansi (external)
+ * - Ruangan: Room name
+ * - Tanggal: Formatted date (d F Y)
+ * - Jam: Time range (H:i - H:i)
+ * - Status: Badge dengan color coding
+ * - Anggota: Member count atau "Eksternal"
+ * - Aksi: Check-in button (AKTIF only, regular bookings only)
+ * 
+ * TARGET ELEMENTS:
+ * - #filter-ruang: Room filter select
+ * - #filter-nama: Name filter input
+ * - #filter-tanggal: Date filter input
+ * - #filter-status: Status filter select
+ * - .btn-checkin: Check-in buttons (data-kode-booking)
+ * - #modal-checkin: Check-in modal
+ * - #anggota-list: Container for member list in modal
+ * - .btn-checkin-anggota: Individual check-in buttons (data-nim)
+ * 
+ * JAVASCRIPT:
+ * - assets/js/booking-list.js: Modal management, AJAX check-in
+ * - Functions:
+ *   * openCheckinModal(kodeBooking): Fetch and show members
+ *   * checkinAnggota(kodeBooking, nim): AJAX check-in action
+ *   * closeCheckinModal(): Hide modal
+ * 
+ * AJAX ENDPOINTS:
+ * 1. GET BOOKING ANGGOTA
+ *    - URL: ?page=admin&action=get_booking_anggota&kode={kode}
+ *    - Returns: {"success": bool, "data": [...], "message": string}
+ * 
+ * 2. CHECK-IN ANGGOTA
+ *    - URL: ?page=admin&action=checkin_anggota
+ *    - Method: POST
+ *    - Body: {kode_booking, nomor_induk}
+ *    - Returns: {"success": bool, "message": string}
+ * 
+ * PAGINATION:
+ * - URL pattern: ?page=admin&action=booking_list&pg={n}&filters...
+ * - 10 records per page
+ * - Inline pagination UI (not using component)
+ * - Previous/Next + page numbers
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Scrollable table (overflow-x-auto)
+ * - Tablet/Desktop: Full table display
+ * - Filter form: Stacks on mobile, inline on desktop
+ * - Modal: Full screen on mobile, max-w-2xl on desktop
+ * 
+ * CSS:
+ * - External: assets/css/kelola-ruangan.css (shared)
+ * - Tailwind utilities
+ * - Blue header: bg-[#1e73be]
+ * - White table background
+ * 
+ * AUTO-UPDATE FEATURES:
+ * - autoUpdateSelesaiStatus(): Called in controller before render
+ * - autoUpdateHangusStatus(): Called in controller before render
+ * - Updates status based on current datetime
+ * 
+ * BUSINESS RULES:
+ * - Check-in only on hari H (booking date)
+ * - Check-in only for AKTIF bookings
+ * - External bookings: No check-in button (no anggota)
+ * - Individual member check-in (not all at once)
+ * - Check-in timestamp recorded for each member
+ * 
+ * SUCCESS FLOW (Check-in):
+ * 1. Admin clicks "Check-in" button
+ * 2. Modal opens, fetches member list
+ * 3. Admin clicks check-in for specific member
+ * 4. AJAX request to server
+ * 5. Server validates hari H
+ * 6. Updates is_checked_in + waktu_check_in
+ * 7. Returns success
+ * 8. Modal updates UI (show checkmark)
+ * 
+ * ERROR HANDLING:
+ * - Not hari H → alert "Check-in hanya bisa dilakukan di hari H!"
+ * - Already checked in → alert "Anggota sudah check-in!"
+ * - Booking not found → alert "Booking tidak ditemukan!"
+ * - Server error → alert "Gagal check-in!"
+ * 
+ * SECURITY:
+ * - Admin/Super Admin access only
+ * - Hari H validation prevents early/late check-in
+ * - AJAX endpoints validate session
+ * - Input sanitization (htmlspecialchars)
+ * 
+ * INTEGRATION:
+ * - Controller: AdminController (booking_list, get_booking_anggota, checkin_anggota)
+ * - Model: BookingListModel (getAll, filter, countFiltered, autoUpdateSelesaiStatus, autoUpdateHangusStatus)
+ * - Model: AnggotaBookingModel (getByKodeBooking, updateCheckIn)
+ * - Model: RuanganModel (getAll)
+ * - Database: booking, anggota_booking, ruangan, status_booking tables
+ * 
+ * @package BookEZ
+ * @subpackage Views\Admin
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

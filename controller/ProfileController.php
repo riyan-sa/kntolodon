@@ -1,12 +1,163 @@
 <?php
+/**
+ * ============================================================================
+ * PROFILECONTROLLER.PHP - User Profile & Settings Controller
+ * ============================================================================
+ * 
+ * Controller untuk mengelola profil user, booking history, pelanggaran, dan settings.
+ * Support untuk User dan Admin dengan tampilan berbeda (admin: dashboard grid, user: tabs).
+ * 
+ * FUNGSI UTAMA:
+ * 1. INDEX - Main profile page dengan tabs: Kode Booking, History, Pelanggaran
+ * 2. UPLOAD FOTO - Upload/update foto profil
+ * 3. CHANGE PASSWORD - Change password dengan old password verification
+ * 
+ * ROUTES:
+ * - ?page=profile&action=index - Profile page dengan pagination (pg_history, pg_pelanggaran)
+ * - ?page=profile&action=upload_foto - Upload foto profil (POST)
+ * - ?page=profile&action=change_password - Change password (POST)
+ * 
+ * PROFILE PAGE STRUCTURE:
+ * - ADMIN/SUPER ADMIN:
+ *   - Shows admin dashboard grid (room management, reports, member list)
+ *   - No booking history or pelanggaran tabs
+ * 
+ * - USER (Mahasiswa/Dosen/Tenaga Pendidikan):
+ *   - Tab 1: Kode Booking - Active booking card (if exists)
+ *   - Tab 2: History - Paginated booking history (SELESAI, DIBATALKAN, HANGUS)
+ *   - Tab 3: Pelanggaran - Paginated pelanggaran/suspensi records
+ *   - Tab 4: Settings - Foto profil upload + change password modal
+ * 
+ * PAGINATION:
+ * - History: 6 records per page (parameter: pg_history)
+ * - Pelanggaran: 6 records per page (parameter: pg_pelanggaran)
+ * - Independent pagination state for each tab
+ * - Preserved in URL when switching tabs
+ * 
+ * ACTIVE BOOKING (KODE BOOKING TAB):
+ * - Show booking with status AKTIF (ketua OR anggota)
+ * - Display: kode_booking, ruangan, tanggal, waktu, anggota list, check-in status
+ * - Show action buttons: Reschedule, Cancel (ketua only)
+ * 
+ * HISTORY TAB:
+ * - Filter: Only SELESAI, DIBATALKAN, HANGUS (exclude AKTIF)
+ * - Sort: Most recent first
+ * - Pagination: 6 per page
+ * - Display: kode_booking, ruangan, tanggal, status with color coding
+ * - Auto-update HANGUS status on page load
+ * 
+ * PELANGGARAN TAB:
+ * - Show all pelanggaran_suspensi records for user
+ * - Display: tanggal_mulai, tanggal_selesai, alasan_suspensi, status
+ * - Status: Active if current date between mulai-selesai
+ * - Pagination: 6 per page
+ * 
+ * UPLOAD FOTO WORKFLOW:
+ * 1. POST validation: Must be POST request
+ * 2. Session check: User must be logged in
+ * 3. File validation:
+ *    - Must be image (JPEG, PNG, WebP)
+ *    - Max size: 25MB
+ *    - MIME type validation via finfo_file
+ * 4. File handling:
+ *    - Delete old foto if exists
+ *    - Generate unique filename: 'profile_{nomor_induk}_{timestamp}.{ext}'
+ *    - Upload to: assets/uploads/images/
+ *    - Create directory if not exists (mode 0755)
+ * 5. Database update: AkunModel::updateFotoProfil()
+ * 6. Session update: $_SESSION['user']['foto_profil']
+ * 7. Redirect with success message
+ * 
+ * CHANGE PASSWORD WORKFLOW:
+ * 1. POST validation: Must be POST request
+ * 2. Session check: User must be logged in
+ * 3. Input validation:
+ *    - old_password, new_password, confirm_password required
+ *    - new_password minimum 8 characters
+ *    - new_password === confirm_password
+ * 4. Old password verification: AkunModel::verifyPassword()
+ * 5. New password !== old password (prevent reuse)
+ * 6. Update password: AkunModel::updatePassword() (auto-hash)
+ * 7. Redirect with success message
+ * 
+ * AUTO-UPDATE INTEGRATION:
+ * - autoUpdateHangusStatus() runs on page load
+ * - Ensures history tab shows accurate booking statuses
+ * - HANGUS status applied to bookings without check-in >10min late
+ * 
+ * FILE UPLOAD SECURITY:
+ * - MIME type validation (not just extension)
+ * - Size limit enforcement (25MB)
+ * - Unique filename generation (prevent conflicts)
+ * - Directory traversal prevention (controlled upload path)
+ * - Old file cleanup (prevent storage bloat)
+ * 
+ * PASSWORD SECURITY:
+ * - Old password verification required
+ * - Minimum 8 characters enforcement
+ * - Password hashing via password_hash() in model
+ * - Prevent password reuse (old !== new)
+ * 
+ * PAGINATION PATTERN:
+ * - URL params: pg_history={n}, pg_pelanggaran={n}
+ * - Calculate: offset = (currentPage - 1) * perPage
+ * - array_slice for in-memory pagination
+ * - Pagination data: {currentPage, totalPages, totalRecords, perPage}
+ * - Preserved when switching tabs via JavaScript
+ * 
+ * BUSINESS RULES:
+ * - FOTO PROFIL: User-controlled, not required for account activation
+ * - PASSWORD: 8-character minimum, old password required for change
+ * - HISTORY: Exclude AKTIF bookings (shown in Kode Booking tab)
+ * - PELANGGARAN: Read-only view, managed by admin
+ * 
+ * USAGE PATTERNS:
+ * - view/profile/index.php: Main profile layout with tabs
+ * - assets/js/profile.js: Tab switching + foto upload modal
+ * - view/components/modal_change_password.php: Password change modal
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
+/**
+ * Class ProfileController - User Profile & Settings Handler
+ * 
+ * @property AkunModel $akunModel Account operations (foto, password)
+ * @property BookingModel $bookingModel Booking history retrieval
+ * @property MemberModel $memberModel Pelanggaran retrieval
+ * @property BookingListModel $bookingListModel Auto-update methods
+ */
 class ProfileController
 {
+    /**
+     * AkunModel instance untuk account operations
+     * @var AkunModel
+     */
     private AkunModel $akunModel;
+    
+    /**
+     * BookingModel instance untuk booking history
+     * @var BookingModel
+     */
     private BookingModel $bookingModel;
+    
+    /**
+     * MemberModel instance untuk pelanggaran data
+     * @var MemberModel
+     */
     private MemberModel $memberModel;
+    
+    /**
+     * BookingListModel instance untuk auto-update methods
+     * @var BookingListModel
+     */
     private BookingListModel $bookingListModel;
 
+    /**
+     * Constructor - Initialize models and session
+     */
     public function __construct()
     {
         if (session_status() === PHP_SESSION_NONE) {

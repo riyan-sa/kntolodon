@@ -1,14 +1,128 @@
 <?php
+/**
+ * ============================================================================
+ * REGISTERCONTROLLER.PHP - User Registration Controller
+ * ============================================================================
+ * 
+ * Controller untuk menangani registrasi user baru dengan validasi lengkap.
+ * Support untuk Mahasiswa (dengan validasi KubacaPNJ) dan Dosen/Tenaga Pendidikan.
+ * 
+ * FUNGSI UTAMA:
+ * 1. DISPLAY FORM - Render registration form
+ * 2. SUBMIT - Process registration dengan comprehensive validation
+ *    - Input validation (required fields, format)
+ *    - Email domain validation (PNJ only)
+ *    - Uniqueness check (NIM, email, username)
+ *    - Password strength validation (min 8 chars)
+ *    - File upload validation (screenshot KubacaPNJ)
+ *    - CAPTCHA validation
+ * 
+ * ROUTES:
+ * - ?page=register&action=index - Display registration form
+ * - ?page=register&action=submit - Process registration (POST)
+ * 
+ * REGISTRATION FIELDS:
+ * - username: Display name (unique)
+ * - nomor_induk: NIM (students) or NIP (staff) - unique
+ * - email: PNJ domain email (unique)
+ * - password: Minimum 8 characters
+ * - password_ulang: Confirmation password (must match)
+ * - jurusan: Optional, for Mahasiswa only
+ * - prodi: Optional, for Mahasiswa only
+ * - SSKUBACAPNJ: Screenshot KubacaPNJ (image file, optional)
+ * - captcha: CAPTCHA code validation
+ * 
+ * EMAIL VALIDATION RULES:
+ * - MAHASISWA: nama.x@stu.pnj.ac.id (single char before @stu)
+ *   - Regex: /^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/
+ * - DOSEN/STAFF: nama@jurusan.pnj.ac.id or nama@pnj.ac.id (NOT @stu)
+ *   - Regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.pnj\.ac\.id$/
+ *   - Must NOT match: /@stu\.pnj\.ac\.id$/
+ * 
+ * FILE UPLOAD VALIDATION:
+ * - Field: SSKUBACAPNJ (screenshot KubacaPNJ untuk validasi mahasiswa)
+ * - Allowed types: image/jpeg, image/png, image/webp
+ * - Max size: 25MB
+ * - Storage: assets/uploads/images/
+ * - Filename pattern: 'validasi_' + timestamp + '_' + random_hex + extension
+ * - Directory creation: mkdir dengan mode 0755 if not exists
+ * 
+ * VALIDATION FLOW:
+ * 1. CAPTCHA validation (case-insensitive)
+ * 2. Required fields check (username, NIM, email, password)
+ * 3. Email format validation (filter_var)
+ * 4. Email domain validation (PNJ patterns)
+ * 5. Password length check (min 8 chars)
+ * 6. Password confirmation match
+ * 7. Uniqueness checks:
+ *    - isNomorIndukExists()
+ *    - isEmailExists()
+ *    - isUsernameExists()
+ * 8. File upload validation (if provided)
+ * 9. Database insert via AkunModel::register()
+ * 
+ * ACCOUNT CREATION:
+ * - Default role: 'User' (replaces legacy Mahasiswa/Dosen/Tenaga Pendidikan)
+ * - Default status: 'Tidak Aktif' (requires admin activation)
+ * - jurusan/prodi: Set to NULL if empty string
+ * - validasi_mahasiswa: Path to uploaded screenshot or NULL
+ * - foto_profil: NULL (uploaded separately after activation)
+ * 
+ * ERROR HANDLING:
+ * - Collect all errors in array
+ * - Display combined error message via alert()
+ * - Return to registration form on error
+ * - Rollback file upload on database error
+ * 
+ * SUCCESS FLOW:
+ * 1. Insert new account to database
+ * 2. Clear CAPTCHA session code
+ * 3. Show success message: "Akun menunggu aktivasi admin"
+ * 4. Redirect to login page
+ * 
+ * SECURITY FEATURES:
+ * - Password hashing via password_hash() (handled by AkunModel)
+ * - CAPTCHA validation against session code
+ * - File type validation via MIME type check
+ * - SQL injection prevention (prepared statements in model)
+ * - XSS prevention (addslashes for alert messages)
+ * 
+ * USAGE PATTERNS:
+ * - view/register.php: Registration form
+ * - assets/js/regis.js: Client-side validation + password strength
+ * - AkunModel::register(): Database insertion
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
+/**
+ * Class RegisterController - User Registration Handler
+ * 
+ * @property AkunModel $model Model untuk account operations
+ */
 class RegisterController
 {
+    /**
+     * AkunModel instance untuk database operations
+     * @var AkunModel
+     */
     private AkunModel $model;
 
+    /**
+     * Constructor - Initialize AkunModel
+     */
     public function __construct()
     {
         $this->model = new AkunModel();
     }
 
+    /**
+     * Index Action - Display registration form
+     * 
+     * @return void
+     */
     public function index()
     {
         $this->renderRegistView();

@@ -1,11 +1,85 @@
 /**
- * Dashboard Page Scripts
- * Handles booking finish flow, rating submission, and room description modals
+ * ============================================================================
+ * DASHBOARD.JS - User Dashboard Scripts
+ * ============================================================================
+ * 
+ * Module untuk menangani user dashboard interactions:
+ * - Booking finish flow (Selesai booking dengan confirmation)
+ * - Room description modals
+ * - Rating submission (legacy/deprecated code)
+ * 
+ * FUNGSI UTAMA:
+ * 1. BOOKING FINISH FLOW
+ *    - initDashboard(): Setup event listeners untuk finish flow
+ *    - #btn-finish: Trigger confirmation overlay
+ *    - #btn-confirm-no: Cancel dan kembali ke booking card
+ *    - #btn-confirm-yes: Submit form selesai → redirect to feedback page
+ * 
+ * 2. ROOM DESCRIPTION MODALS
+ *    - Event delegation untuk room modal buttons
+ *    - Uses data attributes untuk pass room data
+ *    - Shows room details (foto, nama, kapasitas, fasilitas, tata tertib)
+ * 
+ * 3. LEGACY RATING FLOW (DEPRECATED)
+ *    - Old inline rating system (replaced by separate feedback page)
+ *    - submitRating(), submitFeedback(), showNavbarWithoutTitle()
+ *    - Code disabled dengan if(false) check
+ *    - Kept for reference only
+ * 
+ * BOOKING FINISH WORKFLOW:
+ * 1. User clicks \"Selesaikan Booking\" (#btn-finish)
+ * 2. Hide booking card, show confirmation overlay
+ * 3. User clicks \"Belum\" → hide overlay, show card again
+ * 4. User clicks \"Selesai\" → submit #form-selesai
+ * 5. Server updates booking status to SELESAI
+ * 6. Store booking ID in session: $_SESSION['feedback_booking_id']
+ * 7. Redirect to feedback page (?page=dashboard&action=feedback)
+ * 8. User submits feedback → clear session → redirect to dashboard
+ * 
+ * VALIDATION (SERVER-SIDE):
+ * - Only ketua can complete booking
+ * - Can only complete on booking date (hari H)
+ * - Current time must be between waktu_mulai and waktu_selesai
+ * - Booking must have status AKTIF
+ * 
+ * TARGET ELEMENTS:
+ * - #btn-finish: Selesaikan Booking button
+ * - #confirmation-overlay: Confirmation modal
+ * - #btn-confirm-no: Belum button (cancel)
+ * - #btn-confirm-yes: Selesai button (confirm)
+ * - #form-selesai: Hidden form untuk submit booking completion
+ * - #dashboard-data: Data container dengan base path
+ * 
+ * DATA ATTRIBUTES:
+ * - data-base-path: Base path untuk asset URLs
+ * 
+ * ROOM MODAL PATTERN (via event delegation):
+ * - Button dengan data-room-* attributes
+ * - Opens modal dengan room details
+ * - Close via overlay click or close button
+ * 
+ * LEGACY CODE NOTE:
+ * Old rating system code is disabled but kept for reference.
+ * New flow uses separate feedback page dengan better UX.
+ * 
+ * USAGE:
+ * - Included in: view/dashboard.php
+ * - Initializes on DOM ready
+ * - Works for both ketua dan anggota views
+ * 
+ * @module dashboard
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
  */
 
 // ==================== DATA INITIALIZATION ====================
 
-// Initialize global variables from data attributes
+/**
+ * Initialize global variables from data attributes
+ * 
+ * Reads ASSET_BASE_PATH dari hidden div dengan data attributes.
+ * Required untuk asset URL generation in dynamically created content.
+ */
 document.addEventListener('DOMContentLoaded', function() {
     const dataContainer = document.getElementById('dashboard-data');
     if (dataContainer) {

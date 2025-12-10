@@ -1,3 +1,138 @@
+<?php
+/**
+ * ============================================================================
+ * NAVBAR_ADMIN.PHP - Admin Navigation Bar Component
+ * ============================================================================
+ * 
+ * Reusable navigation bar untuk admin pages (Admin dan Super Admin).
+ * Conditionally shows links based on user role.
+ * 
+ * FEATURES:
+ * 1. ROLE-BASED NAVIGATION
+ *    - Admin: 5 links (Kelola Ruangan, Laporan, Booking-List, Member-List, Dashboard)
+ *    - Super Admin: 7 links (+ Booking Eksternal + Pengaturan)
+ * 
+ * 2. NAVIGATION LINKS (All Admins)
+ *    a. Logo (left) → ?page=admin (dashboard)
+ *    b. Kelola Ruangan → ?page=admin&action=kelola_ruangan
+ *    c. Laporan Peminjaman → ?page=admin&action=laporan
+ *    d. Booking-List → ?page=admin&action=booking_list
+ *    e. Member-List → ?page=admin&action=member_list
+ * 
+ * 3. SUPER ADMIN EXCLUSIVE LINKS
+ *    a. Booking Eksternal → ?page=admin&action=booking_external (first position)
+ *    b. Pengaturan → ?page=admin&action=pengaturan (last position)
+ *    - Conditional rendering: <?php if ($_SESSION['user']['role'] === 'Super Admin'): ?>
+ * 
+ * 4. INLINE SVG ICONS
+ *    - NO external icon libraries (Font Awesome, Lucide, etc.)
+ *    - All icons: Inline SVG dengan Heroicons style
+ *    - Size: w-5 h-5 (20x20px)
+ *    - Colors: text-black default, group-hover:text-sky-600
+ *    - Icons used:
+ *      * Booking Eksternal: Settings/gear icon
+ *      * Kelola Ruangan: Building/office icon
+ *      * Laporan: Document icon
+ *      * Booking-List: Clipboard icon
+ *      * Member-List: Users icon
+ *      * Pengaturan: Sliders icon
+ * 
+ * 5. PROFILE SECTION (Right)
+ *    - Username display: $_SESSION['user']['username']
+ *    - Profile photo: foto_profil or placeholder icon
+ *    - Links to: ?page=profile
+ *    - Photo size: h-10 w-10 (40x40px circle)
+ * 
+ * LAYOUT STRUCTURE:
+ * - Sticky navbar: sticky top-0 z-50
+ * - White background: bg-white
+ * - Shadow: shadow-sm
+ * - Padding: py-4 px-6
+ * - Flex layout: justify-between (logo left, links center, profile right)
+ * - Responsive: flex-col on mobile, lg:flex-row on desktop
+ * 
+ * NAVIGATION PATTERN:
+ * - Each link: flex items-center gap-2
+ * - Icon + Text label
+ * - Hover effect: text-slate-700 → hover:text-sky-600
+ * - Group hover: Icon color changes dengan text
+ * - Transitions: transition-colors
+ * 
+ * ROLE CHECK:
+ * - Reads: $_SESSION['user']['role']
+ * - Super Admin check: === 'Super Admin' (strict equality)
+ * - Regular Admin: Shows 5 links only
+ * - IMPORTANT: Admin sees subset, Super Admin sees all
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Stacked vertically (flex-col)
+ *   - Logo centered at top
+ *   - Links wrap (flex-wrap) dengan gap-6
+ *   - Profile below links
+ * - Desktop (lg): Horizontal row (lg:flex-row)
+ *   - Logo left
+ *   - Links center (gap-8)
+ *   - Profile right
+ * 
+ * ICON HOVER BEHAVIOR:
+ * - Group class on <a> tag
+ * - Icon has: group-hover:text-sky-600
+ * - Synced color change dengan text label
+ * - Smooth transition: transition-colors
+ * 
+ * PROFILE PHOTO HANDLING:
+ * - Check: isset($_SESSION['user']['foto_profil']) && !empty(...)
+ * - If exists: <img src="<?= $asset(...) ?>" />
+ * - If NOT exists: Placeholder user icon (SVG)
+ * - Rounded circle: rounded-full
+ * - Overflow hidden: overflow-hidden (crops image to circle)
+ * 
+ * SESSION DEPENDENCY:
+ * - CRITICAL: Requires $_SESSION['user'] to be set
+ * - Fields used:
+ *   * role: For conditional Super Admin links
+ *   * username: Display name
+ *   * foto_profil: Profile photo path
+ * 
+ * USAGE PATTERN:
+ * ```php
+ * <?php require __DIR__ . '/../components/navbar_admin.php'; ?>
+ * ```
+ * - Included in: All admin view files
+ * - Path varies: '../components/' or './components/' based on view location
+ * 
+ * LINK DESTINATIONS:
+ * - All links use query string routing: ?page=admin&action={action}
+ * - Logo link: ?page=admin (default action = index = dashboard)
+ * - Profile link: ?page=profile (user profile page)
+ * 
+ * CSS CLASSES:
+ * - Navbar: sticky, top-0, z-50 (always visible on scroll)
+ * - Links: font-medium (semi-bold text)
+ * - Logo: h-8, w-auto, object-contain (responsive scaling)
+ * - Logo animation: logo-scale class (defined in admin-dashboard.css)
+ * 
+ * ACCESSIBILITY:
+ * - All links have text labels (not icon-only)
+ * - Semantic HTML: <nav> element
+ * - Alt text on images (logo, profile photo)
+ * - Logical tab order (left to right)
+ * 
+ * INTEGRATION:
+ * - Used by: All admin pages (dashboard, kelola_ruangan, laporan, etc.)
+ * - Assets: $asset() helper from head.php
+ * - Session: $_SESSION['user'] from LoginController
+ * 
+ * MAINTENANCE:
+ * - To add new link: Insert <a> block in appropriate position
+ * - Icon source: https://heroicons.com/ (copy SVG code)
+ * - Remember: Conditionally render for role restrictions
+ * 
+ * @package BookEZ
+ * @subpackage Views\Components
+ * @version 1.0
+ */
+?>
     <!-- Navbar Admin -->
     <nav class="bg-white py-4 px-6 flex flex-col lg:flex-row justify-between items-center shadow-sm sticky top-0 z-50">
         <!-- Logo Section -->

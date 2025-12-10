@@ -1,10 +1,253 @@
 <?php
+/**
+ * ============================================================================
+ * ADMINCONTROLLER.PHP - Admin Area Management Controller
+ * ============================================================================
+ * 
+ * Controller utama untuk semua fitur admin dengan 20+ methods untuk mengelola sistem BookEZ.
+ * Support untuk Admin dan Super Admin dengan role-based access control.
+ * 
+ * ROLE HIERARCHY:
+ * - Admin: Kelola Ruangan, Laporan, Booking List, Member List
+ * - Super Admin: All Admin features + Booking External + Pengaturan Sistem
+ * 
+ * FUNGSI UTAMA (21 METHODS):
+ * 
+ * 1. DASHBOARD & NAVIGATION
+ *    - index() - Admin dashboard main page
+ * 
+ * 2. KELOLA RUANGAN (Room Management)
+ *    - kelola_ruangan() - List all rooms
+ *    - tambah_ruangan() - Create new room (POST)
+ *    - update_ruangan() - Update room details (POST)
+ *    - delete_ruangan() - Delete room (POST)
+ * 
+ * 3. LAPORAN (Reports & Analytics)
+ *    - laporan() - Display reports page with filters
+ * 
+ * 4. BOOKING LIST (Booking Management)
+ *    - booking_list() - List all bookings with check-in management
+ *    - get_booking_checkin() - AJAX: Get booking check-in details
+ *    - checkin_anggota() - AJAX: Process member check-in
+ * 
+ * 5. MEMBER LIST (User Management)
+ *    - member_list() - List users and admins with tabs
+ *    - load_members() - AJAX: Load paginated members by tab
+ *    - update_foto_profil() - Update member foto profil (POST)
+ *    - update_user_status() - Activate/deactivate user (POST)
+ *    - delete_user() - Delete user account (POST)
+ * 
+ * 6. ADMIN MANAGEMENT
+ *    - create_admin() - Create new admin/super admin (POST)
+ *    - update_admin() - Update admin details (POST)
+ *    - delete_admin() - Delete admin account (POST)
+ * 
+ * 7. BOOKING EXTERNAL (Super Admin Only)
+ *    - booking_external() - List external bookings dengan pagination & filter
+ *    - submit_booking_external() - Create external booking (POST)
+ *    - delete_booking_external() - Delete external booking (POST)
+ * 
+ * 8. PENGATURAN SISTEM (Super Admin Only)
+ *    - pengaturan() - System settings (waktu operasi, hari libur)
+ *    - update_waktu_operasi() - Update operational hours (POST)
+ *    - create_hari_libur() - Add holiday (POST)
+ *    - update_hari_libur() - Update holiday (POST)
+ *    - delete_hari_libur() - Delete holiday (POST)
+ * 
+ * ROUTES:
+ * - ?page=admin&action=index - Admin dashboard
+ * - ?page=admin&action=kelola_ruangan - Room management
+ * - ?page=admin&action=tambah_ruangan - Add room (POST)
+ * - ?page=admin&action=update_ruangan - Update room (POST)
+ * - ?page=admin&action=delete_ruangan - Delete room (POST)
+ * - ?page=admin&action=laporan - Reports page
+ * - ?page=admin&action=booking_list - Booking list dengan check-in
+ * - ?page=admin&action=get_booking_checkin&id={id} - AJAX check-in data
+ * - ?page=admin&action=checkin_anggota - AJAX check-in process (POST)
+ * - ?page=admin&action=member_list - Member management dengan tabs
+ * - ?page=admin&action=load_members&tab={user|admin}&page_num={n} - AJAX pagination
+ * - ?page=admin&action=update_foto_profil - Update member foto (POST)
+ * - ?page=admin&action=update_user_status - Activate/deactivate user (POST)
+ * - ?page=admin&action=delete_user - Delete user (POST)
+ * - ?page=admin&action=create_admin - Add admin (POST)
+ * - ?page=admin&action=update_admin - Update admin (POST)
+ * - ?page=admin&action=delete_admin - Delete admin (POST)
+ * - ?page=admin&action=booking_external - External bookings (Super Admin)
+ * - ?page=admin&action=submit_booking_external - Create external booking (POST)
+ * - ?page=admin&action=delete_booking_external - Delete external (POST)
+ * - ?page=admin&action=pengaturan - System settings (Super Admin)
+ * - ?page=admin&action=update_waktu_operasi - Update hours (POST)
+ * - ?page=admin&action=create_hari_libur - Add holiday (POST)
+ * - ?page=admin&action=update_hari_libur - Update holiday (POST)
+ * - ?page=admin&action=delete_hari_libur - Delete holiday (POST)
+ * 
+ * KELOLA RUANGAN (ROOM MANAGEMENT):
+ * - Display all rooms (Ruang Umum + Ruang Rapat)
+ * - CRUD operations: Create, Read, Update, Delete
+ * - Foto upload: Max 5MB, image only (JPEG/PNG/WebP)
+ * - Validasi kapasitas: min < max
+ * - Validasi delete: Cannot delete room dengan booking aktif
+ * - File management: Auto-delete old foto on update/delete
+ * 
+ * LAPORAN (REPORTS):
+ * - Most Booked Rooms: Top 5 rooms by booking count
+ * - Least Booked Rooms: Bottom 5 rooms by booking count
+ * - User Statistics: Total users, active users, suspended users
+ * - Booking Statistics: Total bookings by status (AKTIF, SELESAI, DIBATALKAN, HANGUS)
+ * - Filter by date range (tanggal_mulai, tanggal_akhir)
+ * - Real-time data via LaporanModel
+ * 
+ * BOOKING LIST:
+ * - Display all bookings (user + external) dengan pagination
+ * - Filter by: ruangan, status, tanggal
+ * - Auto-update: HANGUS and SELESAI status on page load
+ * - Check-in management:
+ *   - Modal shows anggota list with check-in status
+ *   - AJAX endpoint: get_booking_checkin returns {success, booking, anggota}
+ *   - AJAX process: checkin_anggota validates and updates anggota_booking
+ * - Status badges with color coding
+ * 
+ * MEMBER LIST:
+ * - Two tabs: User (Mahasiswa/Dosen) and Admin (Admin/Super Admin)
+ * - AJAX pagination: load_members endpoint returns JSON
+ * - Pagination state: pg_user, pg_admin in URL
+ * - User management:
+ *   - View/Edit modal with validation
+ *   - Foto profil upload (separate action)
+ *   - Status toggle: Aktif ↔ Tidak Aktif
+ *   - Delete with confirmation
+ * - Admin management:
+ *   - Create new admin/super admin
+ *   - Edit admin details
+ *   - Delete admin (cannot delete self)
+ * - Email validation: Strict PNJ domain (@stu.pnj.ac.id, @*.pnj.ac.id)
+ * - Password: Minimum 8 characters
+ * 
+ * BOOKING EXTERNAL (SUPER ADMIN ONLY):
+ * - Two-column layout: Form (left) + Schedule (right)
+ * - Tab system: Mendatang vs Histori
+ * - Filter by: Ruangan, Instansi, Tanggal
+ * - Form fields:
+ *   - Pilih Ruangan (select dari Ruang Rapat only)
+ *   - Nama Instansi (text)
+ *   - Surat Lampiran (PDF upload, max 25MB)
+ *   - Tanggal, Jam Mulai, Jam Selesai
+ * - Validation:
+ *   - Tanggal tidak boleh masa lalu
+ *   - Waktu selesai > waktu mulai
+ *   - Durasi minimal 15 menit
+ *   - No time slot conflict with existing bookings
+ * - File handling: PDF only, stored in assets/uploads/docs/
+ * - Pagination: 10 per page (parameter: pg)
+ * 
+ * PENGATURAN SISTEM (SUPER ADMIN ONLY):
+ * - Two tabs: Waktu Operasi + Hari Libur
+ * - Waktu Operasi:
+ *   - 7 records (Senin-Minggu)
+ *   - Edit: jam_buka, jam_tutup, is_aktif
+ *   - Affects user booking validation
+ * - Hari Libur:
+ *   - Dynamic list of special dates
+ *   - CRUD operations: Create, Update, Delete
+ *   - Blocks user bookings on registered dates
+ * - Integration: PengaturanModel validation in BookingController
+ * 
+ * FILE UPLOAD PATTERNS:
+ * 1. FOTO RUANGAN:
+ *    - Location: assets/uploads/images/
+ *    - Allowed: image/jpeg, image/png, image/webp
+ *    - Max size: 5MB
+ *    - Filename: 'room_{timestamp}_{random}.{ext}'
+ * 
+ * 2. FOTO PROFIL (Member):
+ *    - Location: assets/uploads/images/
+ *    - Allowed: image/jpeg, image/png, image/webp
+ *    - Max size: 25MB
+ *    - Filename: 'profile_{nomor_induk}_{timestamp}.{ext}'
+ * 
+ * 3. SURAT LAMPIRAN (External Booking):
+ *    - Location: assets/uploads/docs/
+ *    - Allowed: application/pdf
+ *    - Max size: 25MB
+ *    - Filename: 'surat_{timestamp}_{random}.pdf'
+ * 
+ * AUTO-UPDATE INTEGRATION:
+ * - booking_list() calls auto-update methods:
+ *   1. autoUpdateHangusStatus() - bookings tanpa check-in >10min \u2192 HANGUS
+ *   2. autoUpdateSelesaiStatus() - bookings with check-in past waktu_selesai \u2192 SELESAI
+ *   3. autoUpdateRoomStatus() - room availability based on active bookings
+ * 
+ * ROLE-BASED ACCESS:
+ * - Constructor enforces Admin/Super Admin role
+ * - Super Admin only methods:
+ *   - booking_external() - check role before display
+ *   - submit_booking_external() - check role before process
+ *   - pengaturan() - check role before display
+ *   - All pengaturan CRUD methods - check role before process
+ * 
+ * AJAX RESPONSES:
+ * All AJAX methods return JSON:
+ * - {success: bool, message: string, data: mixed}
+ * - Content-Type: application/json
+ * - Output buffer cleared before JSON output
+ * 
+ * SECURITY FEATURES:
+ * - Role check in constructor (redirect non-admins)
+ * - Super Admin check for privileged features
+ * - Session validation untuk semua actions
+ * - MIME type validation untuk file uploads
+ * - File size validation
+ * - Email domain validation (PNJ only)
+ * - Password strength validation (min 8 chars)
+ * - SQL injection prevention (prepared statements)
+ * - XSS prevention (addslashes for alerts)
+ * - CSRF prevention (session-based auth)
+ * 
+ * USAGE PATTERNS:
+ * - view/admin/dashboard.php - Admin dashboard grid
+ * - view/admin/kelola_ruangan.php - Room management
+ * - view/admin/laporan.php - Reports page
+ * - view/admin/booking_list.php - Booking list with check-in
+ * - view/admin/member_list.php - Member management
+ * - view/admin/booking_external.php - External bookings (Super Admin)
+ * - view/admin/pengaturan.php - System settings (Super Admin)
+ * - assets/js/kelola-ruangan.js - Room modals
+ * - assets/js/booking-list.js - Check-in modal
+ * - assets/js/member-list.js - Member modals + pagination
+ * - assets/js/admin.js - Booking external + pengaturan tabs
+ * - assets/js/laporan.js - Report filters
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
+/**
+ * Class AdminController - Admin Area Management
+ * 
+ * @property AkunModel $akunModel Account operations
+ * @property PengaturanModel $pengaturanModel System settings
+ */
 class AdminController
 {
+    /**
+     * AkunModel instance untuk account operations
+     * @var AkunModel
+     */
     private AkunModel $akunModel;
+    
+    /**
+     * PengaturanModel instance untuk system settings
+     * @var PengaturanModel
+     */
     private PengaturanModel $pengaturanModel;
 
+    /**
+     * Constructor - Role check and initialize models
+     * 
+     * CRITICAL: Enforces Admin/Super Admin role requirement
+     * Redirects non-admins to user dashboard
+     */
     public function __construct()
     {
         if (session_status() === PHP_SESSION_NONE) {

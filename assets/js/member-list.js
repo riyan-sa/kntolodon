@@ -1,6 +1,77 @@
+/**
+ * ============================================================================
+ * MEMBER-LIST.JS - Admin Member Management Module
+ * ============================================================================
+ * 
+ * JavaScript module untuk halaman Member List (admin area).
+ * Menangani tab switching, AJAX data loading, pagination, filtering, dan modal operations.
+ * 
+ * FUNGSI UTAMA:
+ * 1. TAB SWITCHING - User tab vs Admin tab dengan persistence via URL params
+ * 2. AJAX DATA LOADING - Load member data without page reload
+ * 3. PAGINATION - Navigate through paginated results per tab
+ * 4. FILTERING - Search by nama, NIM, prodi, status
+ * 5. MODAL OPERATIONS - View, Edit, Add, Delete member accounts
+ * 6. FORM VALIDATION - Email domain (PNJ), password strength, unique checks
+ * 
+ * CRITICAL PATTERNS:
+ * - NO inline script blocks - all data passed via data attributes
+ * - Event delegation for dynamically loaded content
+ * - Tab-specific pagination state (currentPageUser, currentPageAdmin)
+ * - URL parameter persistence for tab switching
+ * - Dynamic table headers based on active tab
+ * 
+ * DATA FLOW:
+ * 1. User switches tab → switchTab() updates URL params
+ * 2. URL params read → initializeActiveTab() restores state
+ * 3. Filter change → captureCurrentFilters() + loadMemberData()
+ * 4. AJAX request → renderMemberList() + renderPagination()
+ * 5. Click member → openModal() for view/edit
+ * 
+ * AJAX ENDPOINTS:
+ * - ?page=admin&action=load_members&tab={user|admin}&page_num={n}
+ * - Returns JSON: {success: bool, data: array, pagination: object, message: string}
+ * 
+ * MODAL MODES:
+ * - view: Display member details (read-only)
+ * - edit: Edit existing member
+ * - add: Create new admin account
+ * - delete: Confirm deletion
+ * 
+ * TAB STRUCTURE:
+ * - User Tab: Shows User role (6 columns: Profil|Nama|NIM|Prodi|Validasi|Status)
+ * - Admin Tab: Shows Admin/Super Admin (4 columns: Profil|Nama|NIP|Status)
+ * 
+ * EMAIL VALIDATION PATTERNS:
+ * - Mahasiswa: nama.x@stu.pnj.ac.id (single char before @stu)
+ * - Dosen/Admin: nama@jurusan.pnj.ac.id or nama@pnj.ac.id (NOT @stu)
+ * 
+ * DEPENDENCIES:
+ * - HTML: view/admin/member_list.php (provides data attributes and DOM structure)
+ * - CSS: assets/css/member-list.css (custom styling)
+ * - Backend: AdminController::load_members() (AJAX endpoint)
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
+
 // ==================== DATA INITIALIZATION ====================
 
-// Initialize global variables from data attributes
+/**
+ * Initialize Global Variables from Data Attributes
+ * 
+ * Mengambil data dari hidden div dengan data attributes (NOT inline script blocks).
+ * Pattern ini mencegah inline JavaScript dan memisahkan data dari logic.
+ * 
+ * DATA ATTRIBUTES:
+ * - data-user-role: Current user's role (untuk show/hide Super Admin features)
+ * - data-base-path: Base path untuk asset URLs (handles subfolder deploys)
+ * 
+ * WINDOW GLOBALS SET:
+ * - window.USER_ROLE: 'User', 'Admin', or 'Super Admin'
+ * - window.ASSET_BASE_PATH: Base path string (e.g., '/PBL%20Perpustakaan' or '')
+ */
 document.addEventListener('DOMContentLoaded', function() {
     const dataContainer = document.getElementById('member-list-data');
     if (dataContainer) {
@@ -11,7 +82,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ==================== SVG ICONS ====================
 
-// SVG Icons as constants
+/**
+ * SVG Icon Constants
+ * 
+ * Inline SVG icons untuk UI elements (NO external icon libraries like Font Awesome).
+ * Digunakan untuk consistent iconography di seluruh member list.
+ * 
+ * AVAILABLE ICONS:
+ * - user: Profile/avatar icon
+ * - mail: Email icon
+ * - school: Education/prodi icon
+ * - calendar: Date/schedule icon
+ */
 const SVG_ICONS = {
     user: `<svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -28,12 +110,54 @@ const SVG_ICONS = {
     </svg>`
 };
 
-// State
+/**
+ * ============================================================================
+ * STATE MANAGEMENT
+ * ============================================================================
+ * 
+ * Global state variables untuk tracking UI state, pagination, dan filters.
+ * CRITICAL: State persistence dilakukan via URL parameters, bukan hanya JS variables.
+ */
+
+/**
+ * Current active tab ('user' or 'admin')
+ * Determines which member list is displayed
+ * @type {string}
+ */
 let currentTab = 'user';
-let currentPageUser = 1;  // Track current page for user tab
-let currentPageAdmin = 1; // Track current page for admin tab
+
+/**
+ * Current page number for User tab
+ * Tracked separately untuk independent pagination state
+ * @type {number}
+ */
+let currentPageUser = 1;
+
+/**
+ * Current page number for Admin tab  
+ * Tracked separately untuk independent pagination state
+ * @type {number}
+ */
+let currentPageAdmin = 1;
+
+/**
+ * Currently selected member item (for modal operations)
+ * @type {Object|null}
+ */
 let currentItem = null;
+
+/**
+ * Type of current item ('user' or 'admin')
+ * Determines modal behavior dan form fields
+ * @type {string}
+ */
 let currentItemType = 'user';
+
+/**
+ * Current filter values per tab
+ * Captured from form inputs untuk AJAX requests
+ * @type {Object}
+ */
 let currentFilters = {
     user: { nama: '', nomor_induk: '', prodi: '', status: '' },
     admin: { nama_admin: '', nomor_induk_admin: '', status_admin: '' }
@@ -42,7 +166,24 @@ let currentFilters = {
 // ==================== UTILITY FUNCTIONS ====================
 
 /**
- * Escape HTML to prevent XSS
+ * Escape HTML - Prevent XSS attacks by escaping special characters
+ * 
+ * Converts special HTML characters to HTML entities.
+ * SECURITY CRITICAL: Always use this when inserting user data into HTML.
+ * 
+ * ESCAPED CHARACTERS:
+ * - & → &amp;
+ * - < → &lt;
+ * - > → &gt;
+ * - " → &quot;
+ * - ' → &#039;
+ * 
+ * @param {string} text - Text to escape
+ * @returns {string} Escaped text safe for HTML insertion
+ * 
+ * @example
+ * escapeHtml('<script>alert("XSS")</script>')
+ * // Returns: '&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;'
  */
 function escapeHtml(text) {
     const map = {
@@ -56,7 +197,19 @@ function escapeHtml(text) {
 }
 
 /**
- * Capture current filter values from form
+ * Capture Current Filter Values - Read form inputs dan simpan ke state
+ * 
+ * Reads current values dari filter form inputs dan updates currentFilters object.
+ * Called before AJAX requests untuk include filter params.
+ * 
+ * FILTER FIELDS:
+ * - User Tab: nama, nomor_induk, prodi, status
+ * - Admin Tab: nama_admin, nomor_induk_admin, status_admin
+ * 
+ * STATE UPDATED:
+ * - currentFilters.user atau currentFilters.admin based on currentTab
+ * 
+ * @returns {void}
  */
 function captureCurrentFilters() {
     const searchNama = document.getElementById('search-nama');
@@ -79,7 +232,35 @@ function captureCurrentFilters() {
 // ==================== AJAX FUNCTIONS ====================
 
 /**
- * Load member data via AJAX
+ * Load Member Data via AJAX
+ * 
+ * Fetches paginated member list data from server without page reload.
+ * Updates DOM dengan rendered results dan pagination controls.
+ * 
+ * FLOW:
+ * 1. Save current page number to state (currentPageUser/currentPageAdmin)
+ * 2. Build URL params dengan tab, page, dan filter values
+ * 3. Show loading spinner di container
+ * 4. Fetch data from AJAX endpoint
+ * 5. Render member list dan pagination on success
+ * 6. Show error alert on failure
+ * 
+ * AJAX ENDPOINT:
+ * - URL: index.php?page=admin&action=load_members
+ * - Method: GET
+ * - Response: JSON {success: bool, data: array, pagination: object, message: string}
+ * 
+ * FILTER PARAMS:
+ * - User tab: nama, nomor_induk, prodi, status
+ * - Admin tab: nama_admin, nomor_induk_admin, status_admin
+ * 
+ * @param {string} tab - Tab name ('user' or 'admin')
+ * @param {number} [page=1] - Page number to load (1-indexed)
+ * @returns {void}
+ * 
+ * @example
+ * loadMemberData('user', 1); // Load first page of users
+ * loadMemberData('admin', 3); // Load third page of admins
  */
 function loadMemberData(tab, page = 1) {
     // Save current page state per tab
@@ -131,7 +312,36 @@ function loadMemberData(tab, page = 1) {
 }
 
 /**
- * Render member list
+ * Render Member List - Generate HTML untuk member cards
+ * 
+ * Creates HTML markup untuk member list cards dengan event delegation support.
+ * Handles empty state, photo fallbacks, dan status styling.
+ * 
+ * CARD STRUCTURE:
+ * - User cards: 6 columns (Profil|Nama|NIM|Prodi|Validasi|Status)
+ * - Admin cards: 4 columns (Profil|Nama|NIP|Status)
+ * 
+ * DATA ATTRIBUTES:
+ * - data-member-view: Marks clickable member card
+ * - data-member-data: JSON-encoded member object (for modal)
+ * - data-member-type: 'user' or 'admin'
+ * 
+ * PHOTO HANDLING:
+ * - If foto_profil exists: <img> dengan onerror fallback to SVG
+ * - If null: Show default user icon SVG
+ * - Path normalization: handles 'assets/' prefix dan ASSET_BASE_PATH
+ * 
+ * STATUS STYLING:
+ * - Aktif: text-gray-800 (dark gray)
+ * - Tidak Aktif: text-red-500 (red)
+ * 
+ * SECURITY:
+ * - All user data escaped via escapeHtml()
+ * - JSON data HTML-encoded untuk data attributes
+ * 
+ * @param {string} tab - Tab name ('user' or 'admin')
+ * @param {Array<Object>} data - Array of member objects
+ * @returns {void}
  */
 function renderMemberList(tab, data) {
     const container = document.getElementById(tab === 'user' ? 'list-container-user' : 'list-container-admin');
@@ -200,7 +410,32 @@ function renderMemberList(tab, data) {
 }
 
 /**
- * Render pagination controls
+ * Render Pagination Controls - Generate pagination UI
+ * 
+ * Creates pagination controls with prev/next buttons dan page numbers.
+ * Auto-hides when totalPages <= 1 (no pagination needed).
+ * 
+ * FEATURES:
+ * - Previous/Next buttons dengan disabled state
+ * - Page number range (current ± 2 pages)
+ * - Active page highlight
+ * - Record count display (showing X-Y of Z)
+ * - Click handlers call loadMemberData() dengan appropriate page
+ * 
+ * PAGINATION OBJECT:
+ * @property {number} currentPage - Active page number (1-indexed)
+ * @property {number} totalPages - Total number of pages
+ * @property {number} totalRecords - Total number of records
+ * @property {number} perPage - Records per page (usually 10)
+ * 
+ * STYLING:
+ * - Active page: bg-[#1e73be] text-white (blue highlight)
+ * - Regular page: bg-white text-gray-700 (white button)
+ * - Disabled: bg-gray-100 text-gray-400 cursor-not-allowed
+ * 
+ * @param {string} tab - Tab name ('user' or 'admin')
+ * @param {Object} pagination - Pagination metadata object
+ * @returns {void}
  */
 function renderPagination(tab, pagination) {
     const paginationId = tab === 'user' ? 'pagination-user' : 'pagination-admin';

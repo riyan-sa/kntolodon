@@ -1,7 +1,150 @@
+/**
+ * ============================================================================
+ * BOOKING.JS - Booking Form & Management Scripts
+ * ============================================================================
+ * 
+ * Complex module untuk menangani booking creation form dengan extensive features:
+ * - Kode booking copy functionality
+ * - Anggota management (add/remove/auto-fill)
+ * - NIM auto-fill via AJAX
+ * - Timeline conflict detection
+ * - Booked timeslots visualization
+ * - Form validation
+ * 
+ * FUNGSI UTAMA:
+ * 1. KODE BOOKING PAGE
+ *    - copyCode(): Copy booking code ke clipboard
+ *    - Visual feedback dengan icon change (copy → check)
+ *    - Navigation buttons (back to dashboard)
+ * 
+ * 2. BOOKING FORM MODAL
+ *    - showModalTime(): Toggle timeline modal overlay
+ *    - Hide timeline button
+ * 
+ * 3. ANGGOTA MANAGEMENT
+ *    - tambahAnggota(): Add new anggota card dengan auto-fill support
+ *    - hapusAnggota(index): Remove anggota card by index
+ *    - createAnggotaCard(index): Generate HTML structure untuk anggota card
+ *    - updateTambahButton(): Toggle add button visibility based on count
+ * 
+ * 4. NIM AUTO-FILL (AJAX)
+ *    - setupNimInputListener(card, index): Attach input listener for NIM field
+ *    - Fetch user data via AJAX: ?page=booking&action=get_user_by_nim&nim={nim}
+ *    - Auto-populate nama field when valid NIM entered
+ *    - Show loading/error states
+ * 
+ * 5. TIMELINE CONFLICT DETECTION (AJAX)
+ *    - loadBookedTimeslots(): Fetch booked slots for selected date/room
+ *    - renderTimeline(slots): Display booked time slots visually
+ *    - validateTimeConflict(): Check if selected time overlaps dengan existing bookings
+ *    - Real-time validation on time input change
+ * 
+ * 6. TIME SLOT CALCULATIONS
+ *    - checkTimeOverlap(start1, end1, start2, end2): Detect overlapping time ranges
+ *    - convertTimeToMinutes(time): Convert HH:MM to minutes since midnight
+ *    - Helper functions untuk time comparisons
+ * 
+ * ANGGOTA CARD STRUCTURE:
+ * - NIM/Nomor Induk input (dengan auto-fill)
+ * - Nama Anggota input (read-only, auto-filled)
+ * - Hapus button (top-right X icon)
+ * - Loading indicator (hidden by default)
+ * - Error message (hidden by default)
+ * 
+ * AJAX ENDPOINTS:
+ * 1. Get User by NIM:
+ *    - URL: ?page=booking&action=get_user_by_nim&nim={nim}
+ *    - Response: {success: bool, data: {nomor_induk, username, role, email}, message: string}
+ *    - Used for: Auto-fill nama anggota
+ * 
+ * 2. Get Booked Timeslots:
+ *    - URL: ?page=booking&action=get_booked_timeslots&id_ruangan={id}&tanggal={date}
+ *    - Response: {success: bool, schedules: [{kode_booking, waktu_mulai, waktu_selesai}]}
+ *    - Used for: Timeline conflict detection
+ * 
+ * VALIDATION RULES:
+ * - Ketua (logged-in user) NOT counted sebagai anggota
+ * - Total participants = ketua + anggota count
+ * - Must be within room capacity (min-max)
+ * - No duplicate NIM in anggota list
+ * - All anggota must exist di database
+ * - All anggota must have 'Aktif' status
+ * - No time conflicts dengan existing bookings
+ * 
+ * TIMELINE VISUALIZATION:
+ * - Horizontal bar chart showing booked time slots
+ * - Each slot shows: booking code, time range
+ * - Red bars indicate occupied time slots
+ * - Real-time update when date changed
+ * - Warning shown if selected time overlaps
+ * 
+ * CLIPBOARD API:
+ * - navigator.clipboard.writeText() untuk copy booking code
+ * - Fallback tidak provided (modern browsers only)
+ * - Visual feedback dengan icon animation
+ * 
+ * TARGET ELEMENTS (KODE BOOKING):
+ * - [data-action=\"copy-code\"]: Copy code button
+ * - #bookingCode: Booking code text element
+ * - #copyIcon: Icon element (switches between copy & check)
+ * - [data-action=\"back-to-dashboard\"]: Back buttons
+ * 
+ * TARGET ELEMENTS (BOOKING FORM):
+ * - #btn-lanjutkan: Open timeline modal button
+ * - #btn-close-modal-time: Close timeline modal button
+ * - #btn-hide-timeline: Hide timeline button
+ * - #modal-overlay: Timeline modal overlay
+ * - #anggota-container: Container untuk anggota cards
+ * - #btn-tambah-anggota: Add anggota button
+ * - #scheduleTimeline: Timeline visualization container
+ * 
+ * DYNAMIC FORM FIELDS:
+ * - anggota[{index}][nomor_induk]: NIM input (name attribute)
+ * - anggota[{index}][nama]: Nama input (name attribute, read-only)
+ * - data-index: Index attribute untuk tracking
+ * 
+ * USAGE:
+ * - Included in: view/booking/buat_booking.php, view/booking/kode_booking.php
+ * - Initializes on DOM ready
+ * - Event delegation untuk dynamic content
+ * 
+ * PERFORMANCE NOTES:
+ * - Debounce tidak implemented untuk NIM input (could be added)
+ * - AJAX requests fired on every keystroke (potential optimization)
+ * - Timeline re-rendered on every date change
+ * 
+ * @module booking
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
+
+// ==================== MODAL & UTILITY FUNCTIONS ====================
+
+/**
+ * Toggle timeline modal visibility
+ * 
+ * Simple toggle function untuk show/hide timeline modal overlay.
+ * Uses hidden attribute untuk visibility control.
+ * 
+ * @function showModalTime
+ */
 function showModalTime() {
     document.getElementById('modal-overlay').hidden = !document.getElementById('modal-overlay').hidden;
 }
 
+/**
+ * Copy booking code to clipboard
+ * 
+ * Uses modern Clipboard API untuk copy kode booking.
+ * Provides visual feedback dengan icon change animation.
+ * 
+ * ANIMATION FLOW:
+ * 1. Copy text ke clipboard
+ * 2. Change icon: fa-copy → fa-check (with green color)
+ * 3. After 2 seconds: revert to fa-copy
+ * 
+ * @function copyCode
+ */
 function copyCode() {
     // Ambil teks kode
     const codeText = document.getElementById("bookingCode").innerText;

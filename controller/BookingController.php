@@ -1,13 +1,195 @@
 <?php
+/**
+ * ============================================================================
+ * BOOKINGCONTROLLER.PHP - User Booking Management Controller
+ * ============================================================================
+ * 
+ * Controller untuk menangani pembuatan, pembatalan, dan reschedule booking oleh user.
+ * Terintegrasi dengan sistem validasi operasional (jam operasi, hari libur, kapasitas ruangan).
+ * 
+ * FUNGSI UTAMA:
+ * 1. INDEX - List semua bookings user dengan auto-update status
+ * 2. BUAT BOOKING - Create new booking dengan comprehensive validation
+ * 3. KODE BOOKING - Display booking confirmation page
+ * 4. HAPUS BOOKING - Cancel active booking (ketua only)
+ * 5. RESCHEDULE - Reschedule active booking (ketua only, before check-in)
+ * 6. GET BOOKED TIMESLOTS - AJAX endpoint untuk timeline conflict detection
+ * 7. GET USER BY NIM - AJAX endpoint untuk auto-fill nama anggota
+ * 
+ * ROUTES:
+ * - ?page=booking&action=index - List bookings
+ * - ?page=booking&action=buat_booking - Create booking (GET: form, POST: process)
+ * - ?page=booking&action=kode_booking&id={id} - Booking confirmation
+ * - ?page=booking&action=hapus_booking&id={id} - Cancel booking
+ * - ?page=booking&action=reschedule&id={id} - Reschedule booking
+ * - ?page=booking&action=get_booked_timeslots&id_ruangan={id}&tanggal={date} - AJAX
+ * - ?page=booking&action=get_user_by_nim&nim={nim} - AJAX
+ * 
+ * BOOKING CREATION VALIDATION FLOW:
+ * 1. AUTO-UPDATE STATUS (entry point):
+ *    - autoUpdateHangusStatus() - Check bookings tanpa check-in >10min late → HANGUS
+ *    - autoUpdateSelesaiStatus() - Check bookings with check-in past waktu_selesai → SELESAI
+ *    - autoUpdateRoomStatus() - Update room availability based on active bookings
+ * 
+ * 2. SESSION CHECK:
+ *    - User must be logged in
+ *    - User must NOT be Admin/Super Admin
+ * 
+ * 3. BOOKING BLOCK CHECK:
+ *    - checkBookingBlock() - Check if user has active suspension
+ *    - Block if 24-hour temporary block (1-2 HANGUS in 30 days)
+ *    - Block if 7-day suspension (3 HANGUS in 30 days)
+ * 
+ * 4. ACTIVE BOOKING CHECK:
+ *    - hasActiveBooking() - User can only have ONE active booking at a time
+ *    - Prevents resource hogging
+ * 
+ * 5. ROOM VALIDATION:
+ *    - Room must exist and be 'Tersedia'
+ *    - Jenis ruangan 'Ruang Umum' untuk user
+ * 
+ * 6. DATE/TIME VALIDATION:
+ *    - Tanggal + waktu tidak boleh masa lalu (minimal 5 menit buffer)
+ *    - Waktu selesai > waktu mulai
+ *    - Durasi minimal 15 menit (includes 10-minute check-in tolerance)
+ * 
+ * 7. OPERATIONAL HOURS VALIDATION:
+ *    - validateWaktuOperasi() via PengaturanModel
+ *    - Check if day is active (is_aktif = 1)
+ *    - Check if time within operational hours (jam_buka - jam_tutup)
+ * 
+ * 8. HOLIDAY VALIDATION:
+ *    - validateHariLibur() via PengaturanModel
+ *    - Block bookings on registered holidays
+ * 
+ * 9. CAPACITY VALIDATION:
+ *    - Ketua + anggota count must be between min-max room capacity
+ *    - Each anggota must have valid NIM/NIP
+ *    - No duplicates in anggota list
+ * 
+ * 10. MEMBER VALIDATION:
+ *     - All members must exist in database
+ *     - All members must have 'Aktif' status
+ *     - No member in anggota can be Admin/Super Admin
+ * 
+ * 11. MEMBER BLOCK CHECK:
+ *     - checkBookingBlock() untuk setiap anggota
+ *     - Block booking if any member has active suspension
+ * 
+ * 12. TIME SLOT AVAILABILITY:
+ *     - isTimeSlotAvailable() via ScheduleModel
+ *     - No overlap with existing bookings
+ * 
+ * 13. MEMBER CONFLICT CHECK:
+ *     - checkMemberConflicts() via ScheduleModel
+ *     - No member (ketua + anggota) has another booking at same time
+ * 
+ * 14. DATABASE TRANSACTION:
+ *     - Create booking record (status AKTIF)
+ *     - Create anggota_booking records (ketua + anggota)
+ *     - Create initial schedule record
+ *     - Rollback on any error
+ * 
+ * BOOKING CANCELLATION (HAPUS BOOKING):
+ * - Only ketua can cancel
+ * - Only AKTIF bookings can be cancelled
+ * - Update status to DIBATALKAN (id=3)
+ * - GET: show confirmation form
+ * - POST: process cancellation
+ * 
+ * RESCHEDULE WORKFLOW:
+ * - Only ketua can reschedule
+ * - Only AKTIF bookings can be rescheduled
+ * - Cannot reschedule if any member already checked in
+ * - Can only reschedule minimal 1 hour before waktu_mulai
+ * - New datetime validation: minimal 5 menit dari sekarang
+ * - Minimal duration: 15 menit
+ * - Check time slot availability (exclude current booking)
+ * - Update schedule with reason tracking
+ * - Update booking duration
+ * 
+ * AJAX ENDPOINTS:
+ * 1. get_booked_timeslots:
+ *    - Returns: {success: bool, schedules: [{kode_booking, waktu_mulai, waktu_selesai}]}
+ *    - Used by: assets/js/booking.js for timeline display
+ * 
+ * 2. get_user_by_nim:
+ *    - Returns: {success: bool, data: {nomor_induk, username, role, email}, message: string}
+ *    - Used by: assets/js/booking.js for auto-fill member names
+ *    - Validates user exists and returns basic info (no password)
+ * 
+ * BUSINESS RULES:
+ * - ONE ACTIVE BOOKING PER USER: Prevents resource hogging
+ * - CAPACITY ENFORCEMENT: Ketua + anggota within room min-max capacity
+ * - OPERATIONAL CONSTRAINTS: Respect jam operasi and hari libur
+ * - SUSPENSION SYSTEM: Booking blocked if user or any member suspended
+ * - CHECK-IN TOLERANCE: 15-minute minimal duration includes 10-minute late tolerance
+ * - RESCHEDULE WINDOW: Minimal 1 hour before start time
+ * 
+ * SECURITY FEATURES:
+ * - Session validation untuk semua actions
+ * - Role check: Admin/Super Admin tidak bisa booking
+ * - Ownership check: Only ketua can cancel/reschedule
+ * - Time validation: Prevent past bookings
+ * - SQL injection prevention: Prepared statements in models
+ * - XSS prevention: addslashes untuk alert messages
+ * 
+ * USAGE PATTERNS:
+ * - view/booking/buat_booking.php: Booking form
+ * - view/booking/kode_booking.php: Confirmation page
+ * - view/booking/hapus_booking.php: Cancellation form
+ * - view/booking/reskedul_booking.php: Reschedule form
+ * - assets/js/booking.js: Timeline + anggota management
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
+/**
+ * Class BookingController - User Booking Management
+ * 
+ * @property BookingModel $model Main booking operations
+ * @property RuanganModel $ruanganModel Room data and validation
+ * @property ScheduleModel $scheduleModel Time slot management
+ * @property BookingListModel $bookingListModel Auto-update status methods
+ * @property PengaturanModel $pengaturanModel Operational constraints validation
+ */
 class BookingController
 {
+    /**
+     * BookingModel instance untuk booking CRUD operations
+     * @var BookingModel
+     */
     private BookingModel $model;
+    
+    /**
+     * RuanganModel instance untuk room validation
+     * @var RuanganModel
+     */
     private RuanganModel $ruanganModel;
+    
+    /**
+     * ScheduleModel instance untuk time slot management
+     * @var ScheduleModel
+     */
     private ScheduleModel $scheduleModel;
+    
+    /**
+     * BookingListModel instance untuk auto-update methods
+     * @var BookingListModel
+     */
     private BookingListModel $bookingListModel;
+    
+    /**
+     * PengaturanModel instance untuk operational constraints
+     * @var PengaturanModel
+     */
     private PengaturanModel $pengaturanModel;
 
+    /**
+     * Constructor - Initialize models and session
+     */
     public function __construct()
     {
         if (session_status() === PHP_SESSION_NONE) {

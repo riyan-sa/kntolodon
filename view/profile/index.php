@@ -1,4 +1,227 @@
 <?php
+/**
+ * ============================================================================
+ * PROFILE/INDEX.PHP - User Profile Page
+ * ============================================================================
+ * 
+ * Comprehensive profile page dengan 2 layouts berbeda:
+ * 1. REGULAR USER: 3-tab layout (Kode Booking, History, Pelanggaran)
+ * 2. ADMIN/SUPER ADMIN: Dashboard-style grid layout
+ * 
+ * FEATURES (Regular User):
+ * 1. PROFILE SIDEBAR (Left Column)
+ *    - Avatar dengan hover overlay (click to upload photo)
+ *    - Username dan NIM display
+ *    - Contact info: Email, Jurusan (if mahasiswa), Prodi
+ *    - Action buttons:
+ *      * Ganti Password (opens modal)
+ *      * Keluar (logout)
+ * 
+ * 2. TAB 1: KODE BOOKING (Active Bookings)
+ *    - Shows all AKTIF bookings
+ *    - Booking cards dengan details:
+ *      * Kode Booking
+ *      * Ruangan name
+ *      * Tanggal
+ *      * Waktu (mulai - selesai)
+ *      * Check-in status indicator
+ *      * Action button: "Ubah Jadwal" (reschedule)
+ * 
+ * 3. TAB 2: HISTORY (Past Bookings)
+ *    - Shows bookings dengan status: SELESAI, DIBATALKAN, HANGUS
+ *    - Paginated: 6 records per page
+ *    - Booking cards sama format dengan Tab 1
+ *    - No action buttons (read-only history)
+ * 
+ * 4. TAB 3: PELANGGARAN (Violations/Suspensions)
+ *    - Shows suspension records dari pelanggaran_suspensi table
+ *    - Displays:
+ *      * Tanggal Mulai & Tanggal Selesai
+ *      * Durasi suspension (calculated)
+ *      * Keterangan (reason)
+ *      * Status: Aktif (red) or Selesai (green)
+ *    - Empty state: "Tidak Ada Pelanggaran" dengan green checkmark
+ * 
+ * 5. FOTO UPLOAD MODAL
+ *    - Triggered by clicking avatar
+ *    - File input: Accept images only (JPEG, PNG, WebP)
+ *    - Max size: 25MB (enforced server-side)
+ *    - Preview: Shows selected image before upload
+ *    - Storage: assets/uploads/images/
+ *    - Action: ?page=profile&action=upload_foto
+ * 
+ * 6. PASSWORD CHANGE MODAL
+ *    - Component: modal_change_password.php
+ *    - 3 fields: Old password, New password, Confirm password
+ *    - Validation: Min 8 chars, must match
+ *    - Action: ?page=profile&action=change_password
+ * 
+ * FEATURES (Admin/Super Admin):
+ * - DASHBOARD GRID LAYOUT
+ *   * No tabs - shows admin dashboard grid instead
+ *   * 7 feature cards (same as admin dashboard)
+ *   * Card sizes: Different widths (1-3 columns)
+ *   * Links to admin actions
+ *   * Booking Eksternal & Pengaturan: Super Admin only
+ * 
+ * TAB SWITCHING (User):
+ * - JavaScript: assets/js/profile.js
+ * - Default tab: Kode Booking
+ * - Active state: Blue underline (border-b-2 border-blue-600)
+ * - Hidden state: hidden class on tab content
+ * - Smooth transitions
+ * 
+ * DATA FROM CONTROLLER (ProfileController::index()):
+ * - $booking_aktif (array): Active bookings (status AKTIF)
+ * - $booking_history (array): Past bookings (SELESAI, DIBATALKAN, HANGUS)
+ * - $pelanggaran (array): Suspension records
+ * - $paginationData (array): Pagination info for history tab
+ *   * currentPage, totalPages, totalRecords, perPage
+ * 
+ * BOOKING DATA STRUCTURE:
+ * $booking = [
+ *   'id_booking' => int,
+ *   'kode_booking' => string,
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'tanggal' => string (YYYY-MM-DD),
+ *   'waktu_mulai' => string (HH:MM:SS),
+ *   'waktu_selesai' => string (HH:MM:SS),
+ *   'id_status' => int,
+ *   'nama_status' => string ('AKTIF', 'SELESAI', 'DIBATALKAN', 'HANGUS'),
+ *   'check_in_count' => int (number of checked-in members),
+ *   'total_anggota' => int (total booking members including ketua)
+ * ];
+ * 
+ * PELANGGARAN DATA STRUCTURE:
+ * $pelanggaran = [
+ *   'id' => int,
+ *   'nomor_induk' => string,
+ *   'tanggal_mulai' => string (YYYY-MM-DD),
+ *   'tanggal_selesai' => string (YYYY-MM-DD),
+ *   'keterangan' => string (reason text),
+ *   'status_aktif' => bool (1 = active suspension, 0 = completed)
+ * ];
+ * 
+ * CHECK-IN STATUS INDICATOR:
+ * - Format: "X/Y Anggota Check-in"
+ * - X: check_in_count (members who checked in)
+ * - Y: total_anggota (total members including ketua)
+ * - Example: "3/5 Anggota Check-in"
+ * - Color: Green if all checked in, Gray otherwise
+ * 
+ * STATUS BADGES:
+ * - AKTIF: Green (bg-green-100 text-green-800)
+ * - SELESAI: Blue (bg-blue-100 text-blue-800)
+ * - DIBATALKAN: Gray (bg-gray-100 text-gray-800)
+ * - HANGUS: Red (bg-red-100 text-red-800)
+ * 
+ * PAGINATION (History Tab):
+ * - Records per page: 6
+ * - URL parameter: pg (not 'page' - conflicts with routing)
+ * - Pattern: ?page=profile&pg=2
+ * - Inline pagination UI (not using component file)
+ * - Previous/Next buttons + page numbers
+ * 
+ * TARGET ELEMENTS:
+ * - #avatarContainer: Avatar with upload trigger
+ * - #modalUploadFoto: Photo upload modal
+ * - #modalChangePassword: Password change modal (component)
+ * - #btn-change-password: Trigger password change modal
+ * - #btn-logout: Logout button
+ * - [data-tab]: Tab buttons (kode-booking, history, pelanggaran)
+ * - .tab-content: Tab content containers
+ * - #profile-data: Data container for JavaScript (data-base-path)
+ * 
+ * JAVASCRIPT:
+ * - assets/js/profile.js: Tab switching, modals, photo upload preview
+ * - Event delegation pattern
+ * - NO inline onclick handlers
+ * 
+ * FORM SUBMISSIONS:
+ * - Upload foto: POST to ?page=profile&action=upload_foto (multipart/form-data)
+ * - Change password: POST to ?page=profile&action=change_password
+ * - Reschedule: Link to ?page=booking&action=reschedule&id={id_booking}
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Single column, tabs stack vertically
+ * - Tablet (md): Sidebar 1/3, content 2/3
+ * - Desktop (lg): Sidebar 1/4, content 3/4
+ * - Admin grid: 2 cols (sm), 3 cols (md), 4 cols (lg), 7 cols (xl)
+ * 
+ * ROLE-BASED RENDERING:
+ * - Check: $_SESSION['user']['role']
+ * - If Admin or Super Admin: Show dashboard grid
+ * - If User: Show 3-tab layout
+ * - Pattern: <?php if (in_array($_SESSION['user']['role'], ['Admin', 'Super Admin'])): ?>
+ * 
+ * ADMIN DASHBOARD CARDS (7 cards):
+ * 1. Booking Eksternal (Super Admin only, col-span-2)
+ * 2. Kelola Ruangan (col-span-1)
+ * 3. Laporan Peminjaman (col-span-2)
+ * 4. Booking-List (col-span-2)
+ * 5. Member-List (col-span-2)
+ * 6. Pengaturan (Super Admin only, col-span-2)
+ * 7. Dashboard Admin (col-span-2)
+ * 
+ * EMPTY STATES:
+ * - No active bookings: "Tidak Ada Booking Aktif" dengan info icon
+ * - No history: "Belum Ada Riwayat Booking" dengan clock icon
+ * - No violations: "Tidak Ada Pelanggaran" dengan green checkmark
+ * 
+ * CSS:
+ * - External: assets/css/profile.css
+ * - Tab animations
+ * - Card hover effects (admin grid)
+ * - Logo scale animation
+ * - Modal transitions
+ * 
+ * FOTO UPLOAD FLOW:
+ * 1. Click avatar → Open upload modal
+ * 2. Select image → Preview displayed
+ * 3. Submit form → Upload to server
+ * 4. Server validates: MIME type, size (max 25MB)
+ * 5. Generate unique filename: foto_{timestamp}_{random}.{ext}
+ * 6. Move to: assets/uploads/images/
+ * 7. Update akun.foto_profil in DB
+ * 8. Update $_SESSION['user']['foto_profil']
+ * 9. Reload page to show new photo
+ * 
+ * PASSWORD CHANGE FLOW:
+ * 1. Click "Ganti Password" → Open modal
+ * 2. Enter: Old password, New password, Confirm
+ * 3. Validate: Old password correct, New >= 8 chars, Match confirm
+ * 4. Hash new password: password_hash()
+ * 5. Update akun.password in DB
+ * 6. Alert success, close modal
+ * 
+ * RESCHEDULE FLOW:
+ * 1. Click "Ubah Jadwal" on active booking
+ * 2. Redirect: ?page=booking&action=reschedule&id={id_booking}
+ * 3. Show reschedule form (view/booking/reskedul_booking.php)
+ * 4. Submit new date/time request
+ * 5. Creates schedule record (pending admin approval - PLANNED)
+ * 
+ * SECURITY:
+ * - Session check: User must be logged in
+ * - Photo upload: MIME type validation, size limit
+ * - Password change: Current password verification
+ * - XSS prevention: htmlspecialchars() on all user data
+ * - File upload: Unique filenames prevent overwrites
+ * 
+ * INTEGRATION:
+ * - Controller: ProfileController (index, upload_foto, change_password)
+ * - Model: BookingModel (getActiveByUser, getHistoryByUser)
+ * - Model: PelanggaranSuspensiModel (getByUser)
+ * - Model: AkunModel (updateFoto, verifyPassword, updatePassword)
+ * - Database: akun, booking, pelanggaran_suspensi tables
+ * - Components: modal_change_password.php, navbar
+ * - Assets: profile.css, profile.js
+ * 
+ * @package BookEZ
+ * @subpackage Views\Profile
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

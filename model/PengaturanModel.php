@@ -1,11 +1,107 @@
 <?php
+/**
+ * ============================================================================
+ * PENGATURANMODEL.PHP - System Settings Management Model
+ * ============================================================================
+ * 
+ * Model untuk CRUD operations pada pengaturan sistem (Super Admin only).
+ * Mengelola waktu operasi perpustakaan dan hari libur.
+ * 
+ * FUNGSI UTAMA:
+ * 1. WAKTU OPERASI - Manage operational hours (7 days)
+ * 2. HARI LIBUR - Manage holiday calendar
+ * 3. VALIDATION - Validate booking times against operational constraints
+ * 4. CRUD - Create, read, update, delete settings
+ * 
+ * DATABASE TABLES:
+ * - waktu_operasi: Operational hours per day (7 records: Senin-Minggu)
+ * - hari_libur: Holiday calendar (dynamic dates)
+ * 
+ * WAKTU OPERASI TABLE:
+ * Fields:
+ * - hari: Day name (Senin, Selasa, Rabu, Kamis, Jumat, Sabtu, Minggu)
+ * - jam_buka: Opening time (TIME: HH:MM:SS)
+ * - jam_tutup: Closing time (TIME: HH:MM:SS)
+ * - is_aktif: 1=open, 0=closed (can disable booking for specific days)
+ * - updated_by: Nomor induk Super Admin who last updated
+ * 
+ * HARI LIBUR TABLE:
+ * Fields:
+ * - id_hari_libur: Primary key
+ * - tanggal: Holiday date (DATE: YYYY-MM-DD)
+ * - keterangan: Holiday description/reason
+ * - created_by: Nomor induk Super Admin who created
+ * 
+ * OPERATIONAL HOURS VALIDATION:
+ * validateWaktuOperasi():
+ * - Checks if booking time within operational hours
+ * - Returns: ['allowed' => bool, 'message' => string]
+ * - Logic: waktu_mulai >= jam_buka AND waktu_selesai <= jam_tutup
+ * - Also checks: is_aktif == 1 (day is operational)
+ * 
+ * HOLIDAY VALIDATION:
+ * validateHariLibur() / isHariLibur():
+ * - Checks if booking date is registered holiday
+ * - Returns: bool (true if holiday, false if regular day)
+ * - Blocks booking creation on holidays
+ * 
+ * INTEGRATION POINTS:
+ * - BookingController::buat_booking(): Validates before creating booking
+ * - AdminController::booking_external(): Validates external bookings
+ * - Dashboard: Shows "Perpustakaan tutup" message on closed days
+ * 
+ * CRITICAL VALIDATION FLOW:
+ * 1. User selects tanggal + waktu_mulai + waktu_selesai
+ * 2. Get hari from tanggal (e.g., 'Senin')
+ * 3. validateWaktuOperasi(hari, waktu_mulai, waktu_selesai)
+ * 4. isHariLibur(tanggal)
+ * 5. If both pass, allow booking creation
+ * 6. If either fails, show error message to user
+ * 
+ * TIME FORMAT NORMALIZATION:
+ * - Input: HH:MM or HH:MM:SS
+ * - Stored: HH:MM:SS (normalized)
+ * - Comparison: String comparison (e.g., '09:00:00' < '17:00:00')
+ * 
+ * SUPER ADMIN ONLY:
+ * - All write operations require Super Admin role
+ * - Checked in AdminController::pengaturan()
+ * - Regular admins have read-only access
+ * 
+ * USAGE PATTERNS:
+ * - AdminController::pengaturan() - Settings page with 2 tabs
+ * - AdminController::update_waktu_operasi() - Edit operational hours
+ * - AdminController::create_hari_libur() - Add new holiday
+ * - AdminController::update_hari_libur() - Edit existing holiday
+ * - AdminController::delete_hari_libur() - Remove holiday
+ * 
+ * VIEW INTEGRATION:
+ * - view/admin/pengaturan.php: Settings interface
+ * - assets/js/pengaturan.js: Tab switching + modal handling
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 require_once __DIR__ . '/../config/Koneksi.php';
 
+/**
+ * Class PengaturanModel - System Settings Management
+ * 
+ * @property PDO $pdo Database connection instance
+ */
 class PengaturanModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

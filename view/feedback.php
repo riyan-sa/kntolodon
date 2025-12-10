@@ -1,4 +1,147 @@
 <?php
+/**
+ * ============================================================================
+ * FEEDBACK.PHP - Post-Booking Feedback View
+ * ============================================================================
+ * 
+ * Halaman feedback setelah user menyelesaikan booking.
+ * User diminta untuk rate experience dengan 3 pilihan emoji:
+ * - Senyum (Rating 5) = Sangat Puas (Hijau)
+ * - Netral (Rating 3) = Tidak ditampilkan (simplified to binary)
+ * - Sedih (Rating 1) = Tidak Puas (Merah)
+ * 
+ * NOTE: Current implementation ONLY shows 2 options (Senyum & Sedih)
+ *       untuk simplified feedback (5 or 1, no neutral)
+ * 
+ * FITUR:
+ * 1. THANK YOU MESSAGE
+ *    - Text: "Terima Kasih sudah menggunakan layanan kami..."
+ *    - Informasi: User harus tunggu esok hari untuk booking lagi
+ *    - Explanation: One active booking per user rule
+ * 
+ * 2. RATING SELECTION (Binary: 5 or 1)
+ *    - Senyum (Hijau) → Rating 5: Sangat puas dengan layanan
+ *    - Sedih (Merah) → Rating 1: Tidak puas dengan layanan
+ *    - Click emoji → Visual feedback (scale animation)
+ *    - Selected rating stored for form submission
+ * 
+ * 3. KRITIK DAN SARAN
+ *    - Textarea: User dapat memberikan feedback text
+ *    - Field: kritik_saran (required)
+ *    - Placeholder: "Tulis kritik dan saran Anda di sini..."
+ *    - Max length: No explicit limit (database TEXT type)
+ * 
+ * 4. FORM SUBMISSION
+ *    - Hidden field: skala_kepuasan (populated by JavaScript)
+ *    - Hidden field: id_booking (from session or controller)
+ *    - Textarea: kritik_saran (required)
+ *    - Submit button: "Kirim Feedback"
+ *    - Action: index.php?page=feedback&action=submit (PLANNED)
+ *    - Method: POST
+ * 
+ * FORM FLOW:
+ * - User finishes booking → Dashboard "Selesai" button
+ * - Redirect to feedback page
+ * - Select rating (Senyum or Sedih)
+ * - Write kritik_saran (required)
+ * - Submit → FeedbackModel::create()
+ * - Redirect to dashboard with success message
+ * 
+ * RATING VALUES:
+ * - Rating 5 (Senyum): Excellent experience
+ * - Rating 3 (Netral): NOT USED in current implementation
+ * - Rating 1 (Sedih): Poor experience
+ * - Stored in feedback.skala_kepuasan (TINYINT)
+ * 
+ * TARGET ELEMENTS:
+ * - .rating-btn: Rating buttons (data-rating attribute)
+ * - #skala_kepuasan: Hidden input untuk rating value
+ * - #kritik_saran: Textarea untuk feedback text
+ * - #feedback-form: Form element
+ * 
+ * JAVASCRIPT:
+ * - assets/js/feedback.js: Rating selection and validation
+ * - Visual feedback: Scale animation on click
+ * - Form validation: Ensure rating selected before submit
+ * 
+ * DATA ATTRIBUTES:
+ * - data-rating: Rating value (5 or 1)
+ * - Used by JavaScript untuk populate hidden field
+ * 
+ * DATABASE STRUCTURE (feedback table):
+ * - id: Auto-increment primary key
+ * - id_booking: Foreign key to booking table
+ * - skala_kepuasan: TINYINT (1 or 5)
+ * - kritik_saran: TEXT (required, gabungan kritik dan saran)
+ * - created_at: DATETIME (auto)
+ * 
+ * BUSINESS RULES:
+ * - Feedback collection ONLY after booking status = SELESAI
+ * - One feedback per booking (enforced by unique id_booking)
+ * - Rating is required (JavaScript validates before submit)
+ * - kritik_saran is required (server-side validation)
+ * 
+ * EMOJI ICONS:
+ * - Senyum: SVG emoji (green circle, smiling face)
+ * - Sedih: SVG emoji (red circle, sad face)
+ * - Size: 24x24 (w-24 h-24)
+ * - Hover effect: Shadow and background color change
+ * 
+ * LAYOUT STRUCTURE:
+ * - Navbar: Same as dashboard (logo + profile)
+ * - Main content: Centered vertically and horizontally
+ *   - Thank you message
+ *   - Rating emoji buttons (flex gap-10)
+ *   - Kritik saran textarea
+ *   - Submit button
+ * 
+ * RESPONSIVE DESIGN:
+ * - Text size: 2xl mobile, 3xl tablet/desktop
+ * - Emoji size: Consistent 24x24 (w-24 h-24)
+ * - Content max-width: max-w-5xl
+ * - Padding: px-6 for mobile safety
+ * 
+ * STYLING:
+ * - Rating buttons:
+ *   * Default: Shadow-lg
+ *   * Hover: Shadow-xl + background lightens
+ *   * Active: Scale-95 (transform)
+ * - Textarea:
+ *   * Border: Gray-300
+ *   * Focus: Blue-500 border
+ *   * Resize: Vertical only
+ * - Submit button:
+ *   * Primary blue (bg-blue-600)
+ *   * Hover: bg-blue-700
+ *   * Full width on mobile
+ * 
+ * ERROR HANDLING:
+ * - No rating selected → JavaScript alert "Pilih rating terlebih dahulu!"
+ * - Empty kritik_saran → HTML5 required validation
+ * - Server errors → JavaScript alert from controller
+ * 
+ * ROUTING:
+ * - Current page: ?page=feedback (VIEW ONLY - action not implemented yet)
+ * - Submit action: ?page=feedback&action=submit (PLANNED)
+ * - After submit: Redirect to ?page=dashboard
+ * 
+ * INTEGRATION:
+ * - Entry point: Dashboard "Selesai" button
+ * - Controller: FeedbackController (PLANNED - not exists yet)
+ * - Model: FeedbackModel (create method)
+ * - Database: feedback table
+ * - Related: booking table (id_booking foreign key)
+ * 
+ * FUTURE IMPROVEMENTS:
+ * - Add FeedbackController untuk handle submission
+ * - Implement ?page=feedback&action=submit route
+ * - Add success/error messages via session flash
+ * - Consider adding neutral rating option (Rating 3)
+ * 
+ * @package BookEZ
+ * @subpackage Views
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

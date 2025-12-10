@@ -1,19 +1,80 @@
 <?php
+/**
+ * ============================================================================
+ * BOOKINGEXTERNALMODEL.PHP - External Booking Management Model
+ * ============================================================================
+ * 
+ * Model untuk CRUD operations pada booking eksternal (Super Admin only).
+ * Hanya untuk Ruang Rapat, untuk instansi luar atau civitas akademik.
+ * Tidak menggunakan anggota_booking (single entity booking).
+ * 
+ * FUNGSI UTAMA:
+ * 1. CREATE - Buat booking eksternal dengan surat lampiran
+ * 2. READ - Fetch external bookings dengan filter (upcoming/history)
+ * 3. UPDATE - Update external booking details
+ * 4. DELETE - Hapus external booking
+ * 5. FILTER - Advanced filtering dengan pagination (upcoming/history tabs)
+ * 6. VALIDATION - Time conflict detection untuk external bookings
+ * 
+ * PERBEDAAN DENGAN USER BOOKING:
+ * - ROOM TYPE: Hanya 'Ruang Rapat' (bukan 'Ruang Umum')
+ * - NO ANGGOTA: Tidak ada anggota_booking (single entity)
+ * - NAMA INSTANSI: Stores organization name instead of user info
+ * - SURAT LAMPIRAN: PDF document required (letter of request)
+ * - ACCESS: Super Admin only (NOT regular admin)
+ * 
+ * DATABASE TABLE: booking
+ * UNIQUE IDENTIFIER: nama_instansi IS NOT NULL (marks as external)
+ * KODE BOOKING PREFIX: 'EXT' + 4 random chars (e.g., 'EXTA3F9')
+ * 
+ * RELATED TABLES:
+ * - ruangan: Only jenis='Ruang Rapat'
+ * - status_booking: Same statuses (AKTIF/SELESAI/DIBATALKAN/HANGUS)
+ * - schedule: Time slot management (1:N)
+ * - NO anggota_booking: External bookings don't use this table
+ * - NO feedback: External bookings skip feedback collection
+ * 
+ * SURAT LAMPIRAN:
+ * - Storage: assets/uploads/docs/
+ * - Format: PDF only
+ * - Max size: 25MB
+ * - Required: Yes (validation in controller)
+ * - Filename pattern: 'surat_' + timestamp + '_' + random_hex + '.pdf'
+ * 
+ * TAB STRUCTURE:
+ * - Mendatang (Upcoming): tanggal >= today AND status = AKTIF
+ * - Histori (History): tanggal < today OR status IN (SELESAI/DIBATALKAN/HANGUS)
+ * 
+ * VALIDATION:
+ * - Time conflict check: isTimeConflict() validates no overlap
+ * - Operational hours: Must respect waktu_operasi settings
+ * - Holiday check: Cannot book on registered holidays
+ * 
+ * USAGE PATTERNS:
+ * - AdminController::booking_external() (Super Admin only)
+ * - BookingListModel::filter() includes external bookings for admin view
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * BookingExternalModel - Model untuk CRUD booking eksternal oleh Super Admin
- * Hanya untuk Ruang Rapat, bisa dari instansi luar atau civitas akademik
- * Tidak memerlukan anggota_booking
+ * Class BookingExternalModel - External Booking Management
  * 
- * Relasi:
- * - booking -> ruangan (N:1) via id_ruangan (jenis = 'Ruang Rapat')
- * - booking -> status_booking (N:1) via id_status_booking
- * - booking -> schedule (1:N) via id_booking
+ * @property PDO $pdo Database connection instance
  */
 class BookingExternalModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

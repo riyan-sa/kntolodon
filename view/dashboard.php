@@ -1,4 +1,165 @@
 <?php
+/**
+ * ============================================================================
+ * DASHBOARD.PHP - User Dashboard View
+ * ============================================================================
+ * 
+ * Main dashboard untuk user (Mahasiswa, Dosen, Tenaga Pendidikan).
+ * Menampilkan 2 states:
+ * 1. HAS ACTIVE BOOKING: Show booking card dengan finish confirmation
+ * 2. NO ACTIVE BOOKING: Show room cards dengan booking modal
+ * 
+ * FITUR UTAMA:
+ * 1. ACTIVE BOOKING STATE ($has_active_booking = true)
+ *    - Display booking card dengan details:
+ *      * Kode Booking
+ *      * Ruangan name
+ *      * Tanggal booking
+ *      * Waktu (mulai - selesai)
+ *      * Status (AKTIF)
+ *    - "Selesai" button: Mark booking as completed
+ *    - Confirmation overlay: "Apakah Booking-an Sudah Selesai?"
+ *    - Submit → DashboardController::selesai() → Feedback page
+ * 
+ * 2. NO ACTIVE BOOKING STATE ($has_active_booking = false)
+ *    - Grid of available rooms (responsive: 2/3/4 columns)
+ *    - Each room card shows:
+ *      * Foto ruangan (or placeholder if no photo)
+ *      * Nama ruangan
+ *      * Jenis ruangan (Ruang Umum / Ruang Rapat)
+ *      * Kapasitas (min - max orang)
+ *      * Deskripsi (first 100 chars)
+ *      * Status (Tersedia / Sedang Digunakan / Tidak Tersedia)
+ *    - Click card → Open room detail modal
+ *    - "Booking Sekarang" button in modal → Redirect to booking form
+ * 
+ * 3. ROOM DETAIL MODAL
+ *    - Triggered by clicking room card
+ *    - Shows complete room information:
+ *      * Foto ruangan (larger view)
+ *      * Nama ruangan
+ *      * Jenis ruangan
+ *      * Kapasitas
+ *      * Deskripsi lengkap
+ *      * Tata tertib (rules)
+ *      * Status ruangan
+ *    - "Booking Sekarang" button
+ *    - Close button (X icon)
+ * 
+ * 4. FINISH BOOKING FLOW (Legacy Rating Disabled)
+ *    - "Selesai" button → Show confirmation overlay
+ *    - Overlay has 2 buttons:
+ *      * "Ya" → Submit form to ?page=dashboard&action=selesai
+ *      * "Tidak" → Cancel and close overlay
+ *    - After submit → Redirect to feedback page
+ *    - NOTE: Legacy rating code in dashboard.js is disabled
+ *    - Rating collection now happens on feedback page only
+ * 
+ * 5. NAVBAR
+ *    - Logo (links to dashboard)
+ *    - Page title: "Pesan Ruangan Belajarmu"
+ *    - User profile:
+ *      * Username
+ *      * Profile photo (or placeholder icon)
+ *      * Links to profile page
+ * 
+ * DATA FROM CONTROLLER:
+ * - $has_active_booking (bool): Whether user has active booking
+ * - $active_booking (array|null): Active booking details if exists
+ * - $ruangan_list (array): List of all rooms
+ * - Data passed via DashboardController::index()
+ * 
+ * ACTIVE BOOKING DATA STRUCTURE:
+ * $active_booking = [
+ *   'kode_booking' => string,
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'tanggal' => string (YYYY-MM-DD),
+ *   'waktu_mulai' => string (HH:MM:SS),
+ *   'waktu_selesai' => string (HH:MM:SS),
+ *   'id_status' => int,
+ *   'nama_status' => string ('AKTIF')
+ * ];
+ * 
+ * ROOM DATA STRUCTURE:
+ * $ruangan = [
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'jenis_ruangan' => string ('Ruang Umum', 'Ruang Rapat'),
+ *   'minimal_kapasitas_ruangan' => int,
+ *   'maksimal_kapasitas_ruangan' => int,
+ *   'status_ruangan' => string ('Tersedia', 'Sedang Digunakan', 'Tidak Tersedia'),
+ *   'deskripsi' => string|null,
+ *   'tata_tertib' => string|null,
+ *   'foto_ruangan' => string|null (path)
+ * ];
+ * 
+ * TARGET ELEMENTS:
+ * - #btn-selesai: Finish booking button
+ * - #confirmation-overlay: Confirmation dialog
+ * - #btn-confirm-yes: Confirm finish button
+ * - #btn-confirm-no: Cancel button
+ * - .room-card: Room cards (data-room-id attribute)
+ * - #room-modal: Room detail modal
+ * - #room-modal-content: Modal content container
+ * - #dashboard-data: Data container for JavaScript (data-base-path)
+ * 
+ * JAVASCRIPT:
+ * - assets/js/dashboard.js: Room modals, finish confirmation, legacy rating disabled
+ * - Event delegation: Click listeners for room cards and buttons
+ * - Modal management: Open/close with Escape key support
+ * 
+ * FORM SUBMISSIONS:
+ * - Finish booking: POST to ?page=dashboard&action=selesai
+ * - Hidden field: kode_booking
+ * - Redirects to feedback page after success
+ * 
+ * ROUTING:
+ * - Current page: ?page=dashboard
+ * - Finish action: ?page=dashboard&action=selesai
+ * - Booking form: ?page=booking&action=buat_booking&id_ruangan={id}
+ * - Profile: ?page=profile
+ * 
+ * RESPONSIVE DESIGN:
+ * - Navbar: Hidden title on mobile, visible on md+
+ * - Active booking card: Full width, centered
+ * - Room grid: 2 cols (sm), 3 cols (md), 4 cols (lg)
+ * - Modal: Full screen on mobile, max-w-2xl on desktop
+ * 
+ * STATUS BADGES:
+ * - Tersedia: Green (bg-green-100 text-green-800)
+ * - Sedang Digunakan: Yellow (bg-yellow-100 text-yellow-800)
+ * - Tidak Tersedia: Red (bg-red-100 text-red-800)
+ * 
+ * IMAGE HANDLING:
+ * - Room photos: $asset($ruangan['foto_ruangan'])
+ * - Fallback: Gray placeholder with icon if no photo
+ * - Aspect ratio: aspect-[4/3] for consistency
+ * 
+ * BUSINESS RULES:
+ * - User can have only ONE active booking at a time
+ * - Active booking blocks creation of new bookings
+ * - "Selesai" button only available for AKTIF status
+ * - Finish triggers redirect to feedback collection
+ * - Auto-update status: BookingListModel::autoUpdateSelesaiStatus()
+ *   and autoUpdateHangusStatus() called in controller
+ * 
+ * CSS:
+ * - External: assets/css/dashboard.css
+ * - Custom logo scale animation
+ * - Card hover effects
+ * - Modal transitions
+ * 
+ * INTEGRATION:
+ * - Controller: DashboardController (index, selesai)
+ * - Model: BookingModel (hasActiveBooking, getActiveBooking)
+ * - Model: RuanganModel (getAll, autoUpdateRoomStatus)
+ * - Database: booking, ruangan, status_booking tables
+ * 
+ * @package BookEZ
+ * @subpackage Views
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

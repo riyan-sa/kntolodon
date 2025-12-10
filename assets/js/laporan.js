@@ -1,11 +1,125 @@
 /**
- * Laporan.js - Handle tab switching, filters, dan download untuk halaman laporan
- * NO inline scripts - all event handlers use event delegation
+ * ============================================================================
+ * LAPORAN.JS - Reports Page Scripts
+ * ============================================================================
+ * 
+ * Module untuk menangani reports page dengan multiple period tabs:
+ * - Tab switching (Harian, Mingguan, Bulanan, Tahunan)
+ * - Filter inputs untuk each period type
+ * - Download/export functionality
+ * - NO inline scripts - pure event delegation
+ * 
+ * FUNGSI UTAMA:
+ * 1. TAB SWITCHING
+ *    - showTab(tabName): Show selected tab content
+ *    - gantiTabLaporan(tabName): Switch tabs dengan button style updates
+ *    - URL-based tab restoration on page load
+ * 
+ * 2. FILTER MANAGEMENT
+ *    - setupFilterListeners(): Attach change handlers to filter inputs
+ *    - applyFilter(tab, params): Apply filters dan reload with query params
+ *    - Different filters per tab type:
+ *      a. Harian: Tanggal (date picker)
+ *      b. Mingguan: Tanggal (week start date)
+ *      c. Bulanan: Bulan (select) + Tahun (select)
+ *      d. Tahunan: Tahun (select)
+ * 
+ * 3. DOWNLOAD FUNCTIONALITY
+ *    - downloadLaporan(periode): Trigger download/export
+ *    - Redirects to export endpoint dengan filter params
+ *    - Supports multiple formats (PDF, Excel - if implemented)
+ * 
+ * 4. EVENT DELEGATION
+ *    - [data-laporan-tab]: Tab switching buttons
+ *    - [data-download-laporan]: Download buttons
+ *    - Filter inputs: change event listeners
+ * 
+ * TAB STRUCTURE:
+ * - harian: Daily reports (filter by single date)
+ * - mingguan: Weekly reports (filter by week start date)
+ * - bulanan: Monthly reports (filter by month + year)
+ * - tahunan: Yearly reports (filter by year)
+ * 
+ * TARGET ELEMENTS (TABS):
+ * - [data-laporan-tab]: Tab button elements
+ * - [data-tab-name]: Tab name attribute
+ * - .tab-content: Tab content containers
+ * - #content-{tabName}: Specific tab content
+ * 
+ * TARGET ELEMENTS (FILTERS):
+ * - #filter-tanggal: Daily date picker
+ * - #filter-tanggal-mingguan: Weekly date picker
+ * - #filter-bulan: Monthly month select
+ * - #filter-tahun-bulanan: Monthly year select
+ * - #filter-tahun-tahunan: Yearly year select
+ * 
+ * TARGET ELEMENTS (DOWNLOAD):
+ * - [data-download-laporan]: Download button
+ * - [data-periode]: Period type (harian, mingguan, bulanan, tahunan)
+ * 
+ * FILTER APPLICATION:
+ * - Constructs URL dengan filter query params
+ * - window.location.href untuk page reload dengan filters
+ * - Server-side filtering via LaporanModel methods
+ * 
+ * URL PARAMETER PATTERN:
+ * - ?page=admin&action=laporan&tab={tabName}&{filterParams}
+ * - Example: ?page=admin&action=laporan&tab=bulanan&bulan=12&tahun=2024
+ * 
+ * DATA ATTRIBUTES:
+ * - data-base-path: Base path untuk asset URLs (from #laporan-data)
+ * - data-tab-name: Tab identifier (harian, mingguan, bulanan, tahunan)
+ * - data-periode: Period type untuk download
+ * 
+ * REPORT CONTENT:
+ * - Most Booked Rooms: Top 5 rooms by booking count
+ * - Least Booked Rooms: Bottom 5 rooms by booking count
+ * - User Statistics: Total, active, suspended users
+ * - Booking Statistics: Total bookings by status (AKTIF, SELESAI, DIBATALKAN, HANGUS)
+ * - Filtered by selected period dan date range
+ * 
+ * DOWNLOAD FUNCTIONALITY:
+ * - Server generates report file (PDF/Excel)
+ * - Browser triggers download via redirect
+ * - Filename includes period dan date range
+ * 
+ * CSS CLASSES:
+ * - active: Active tab styling
+ * - tab-content: Tab content container
+ * - hidden: Display none
+ * 
+ * FORM SUBMISSIONS:
+ * - No forms - all filtering via URL params
+ * - Filter changes trigger page reload with new params
+ * - Server-side data fetching dan rendering
+ * 
+ * USAGE:
+ * - Included in: view/admin/laporan.php
+ * - Access: Admin and Super Admin
+ * - Initializes on DOM ready
+ * 
+ * INTEGRATION:
+ * - Server: AdminController::laporan()
+ * - Database: booking, ruangan, akun tables
+ * - Model: LaporanModel (statistical queries)
+ * 
+ * @module laporan
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
  */
 
-// Initialize data from data attributes
+// ==================== DATA INITIALIZATION ====================
+
+/**
+ * Global asset base path
+ * @type {string}
+ */
 let ASSET_BASE_PATH = '';
 
+/**
+ * Initialize data from data attributes
+ * Reads ASSET_BASE_PATH dari #laporan-data div
+ */
 document.addEventListener('DOMContentLoaded', function() {
     // Get base path from data attribute  
     const dataContainer = document.getElementById('laporan-data');

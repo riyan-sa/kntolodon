@@ -1,4 +1,219 @@
 <?php
+/**
+ * ============================================================================
+ * ADMIN/BOOKING_EXTERNAL.PHP - External Booking Management (Super Admin Only)
+ * ============================================================================
+ * 
+ * Super Admin exclusive feature untuk manage external bookings dari non-PNJ organizations.
+ * Two-column layout: Left = booking form, Right = schedule table dengan 2 tabs.
+ * 
+ * ACCESS CONTROL:
+ * - Super Admin ONLY (strict check: role === 'Super Admin')
+ * - Blocks Admin access (redirects to admin dashboard)
+ * - Critical: This feature allows non-user bookings
+ * 
+ * LAYOUT STRUCTURE:
+ * 1. LEFT COLUMN (lg:col-span-4)
+ *    - STATE 1: Card button "Buat Booking Eksternal" (default)
+ *    - STATE 2: Booking form (shown on button click)
+ *    - Toggle between states via JavaScript
+ * 
+ * 2. RIGHT COLUMN (lg:col-span-8)
+ *    - TAB 1: "Mendatang" (Upcoming external bookings)
+ *    - TAB 2: "Histori" (Past external bookings)
+ *    - Table dengan pagination
+ *    - Filter inputs: Ruangan, Instansi, Tanggal
+ * 
+ * FEATURES:
+ * 1. CREATE EXTERNAL BOOKING
+ *    - Form fields:
+ *      * Pilih Ruangan (select dropdown)
+ *      * Nama Instansi (text input)
+ *      * Surat Lampiran (PDF upload)
+ *      * Tanggal (date picker, min=today)
+ *      * Jam Mulai (time input)
+ *      * Jam Selesai (time input)
+ *    - Submit: Creates booking with external source marker
+ * 
+ * 2. VIEW UPCOMING BOOKINGS
+ *    - Table columns: No, Instansi, Ruangan, Tanggal, Jam, Surat, Aksi
+ *    - Shows future bookings only
+ *    - Sorted by tanggal ASC (nearest first)
+ *    - Aksi: Edit (icon), Delete (icon)
+ * 
+ * 3. VIEW BOOKING HISTORY
+ *    - Same table structure as Mendatang
+ *    - Shows past bookings (tanggal < today)
+ *    - Sorted by tanggal DESC (most recent first)
+ *    - Aksi: View details, Delete
+ * 
+ * 4. FILTER FUNCTIONALITY
+ *    - Ruangan: Dropdown dengan all rooms
+ *    - Instansi: Text search (partial match)
+ *    - Tanggal: Date picker (exact match)
+ *    - Filters persist across pagination
+ * 
+ * 5. PAGINATION
+ *    - 10 records per page
+ *    - Separate pagination per tab (pg_upcoming, pg_histori)
+ *    - URL-based state preservation
+ * 
+ * FORM STRUCTURE (External Booking):
+ * - Method: POST
+ * - Action: ?page=admin&action=submit_booking_external
+ * - Enctype: multipart/form-data (for PDF upload)
+ * - Fields:
+ *   * id_ruangan (select, required)
+ *   * nama_instansi (text, required)
+ *   * surat_lampiran (file, PDF only, max 25MB)
+ *   * tanggal (date, required, min=today)
+ *   * waktu_mulai (time, required)
+ *   * waktu_selesai (time, required)
+ * 
+ * FORM VALIDATION:
+ * - Client-side:
+ *   * All required fields filled
+ *   * waktu_selesai > waktu_mulai
+ *   * PDF file only
+ *   * File size check (JavaScript)
+ * - Server-side:
+ *   * Room availability check
+ *   * Time slot conflict check
+ *   * MIME type validation (application/pdf)
+ *   * File size limit (25MB)
+ *   * Past datetime prevention
+ * 
+ * TABLE STRUCTURE (Both tabs):
+ * - Columns: No, Instansi, Ruangan, Tanggal, Jam, Surat, Aksi
+ * - No: Sequential number (pagination-aware)
+ * - Instansi: Organization name
+ * - Ruangan: Room name
+ * - Tanggal: Formatted date (d F Y)
+ * - Jam: Time range (H:i - H:i)
+ * - Surat: Download link (PDF file)
+ * - Aksi: Edit & Delete icons
+ * 
+ * DATA FROM CONTROLLER:
+ * - $upcomingBookings (array): Future external bookings
+ * - $historiBookings (array): Past external bookings
+ * - $ruanganList (array): All rooms for dropdown
+ * - $paginationDataUpcoming (array): Pagination for upcoming tab
+ * - $paginationDataHistori (array): Pagination for histori tab
+ * - $currentTab (string): Active tab ('upcoming' or 'histori')
+ * 
+ * BOOKING DATA STRUCTURE (External):
+ * $externalBooking = [
+ *   'id_booking' => int,
+ *   'kode_booking' => string,
+ *   'nama_instansi' => string,
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'tanggal' => string (YYYY-MM-DD),
+ *   'waktu_mulai' => string (HH:MM:SS),
+ *   'waktu_selesai' => string (HH:MM:SS),
+ *   'surat_lampiran' => string|null (path to PDF),
+ *   'is_external' => int (1 = external booking marker)
+ * ];
+ * 
+ * FILE UPLOAD (Surat Lampiran):
+ * - Allowed: PDF only (application/pdf)
+ * - Max size: 25MB (enforced server-side)
+ * - Storage: assets/uploads/docs/
+ * - Filename pattern: surat_{timestamp}_{random}.pdf
+ * - Validation: finfo_file() untuk MIME type check
+ * 
+ * TAB SWITCHING:
+ * - JavaScript: assets/js/admin.js
+ * - Tabs: data-tab="upcoming" and data-tab="histori"
+ * - Active state: border-b-2 border-sky-600 text-sky-600
+ * - Inactive state: text-gray-600 hover:text-sky-600
+ * - Content toggle: .tab-content hidden/block
+ * 
+ * FORM TOGGLE:
+ * - Button click: #booking-card → hidden, #booking-form → block
+ * - Cancel button: #booking-form → hidden, #booking-card → block
+ * - JavaScript handles smooth transitions
+ * 
+ * ROUTING:
+ * - Current page: ?page=admin&action=booking_external
+ * - Submit form: ?page=admin&action=submit_booking_external (POST)
+ * - Edit: ?page=admin&action=edit_external&id={id} (PLANNED)
+ * - Delete: ?page=admin&action=delete_external&id={id} (POST)
+ * - Tab switch: &tab=upcoming or &tab=histori (GET)
+ * 
+ * PAGINATION:
+ * - Upcoming: ?page=admin&action=booking_external&tab=upcoming&pg_upcoming={n}
+ * - Histori: ?page=admin&action=booking_external&tab=histori&pg_histori={n}
+ * - Filter preservation: &ruang={id}&instansi={name}&tanggal={date}
+ * 
+ * TARGET ELEMENTS:
+ * - #booking-card: Initial card button state
+ * - #booking-form: Booking form state
+ * - #btn-buat-booking: Show form button
+ * - #btn-cancel-booking: Hide form button
+ * - [data-tab]: Tab buttons
+ * - .tab-content: Tab content containers
+ * - #filter-ruang: Room filter select
+ * - #filter-instansi: Organization filter input
+ * - #filter-tanggal: Date filter input
+ * 
+ * JAVASCRIPT:
+ * - assets/js/admin.js: Form toggle, tab switching
+ * - Functions:
+ *   * showBookingForm(): Toggle to form state
+ *   * hideBookingForm(): Toggle to card state
+ *   * switchTab(tabName): Change active tab
+ * 
+ * CSS:
+ * - External: assets/css/booking-external.css
+ * - Font Awesome: Icons for edit/delete/document
+ * - Tailwind: Layout and styling
+ * 
+ * BUSINESS RULES:
+ * - Super Admin can book on behalf of external organizations
+ * - No ketua/anggota (different from regular bookings)
+ * - Requires official letter (surat lampiran)
+ * - Time slot conflict check still applies
+ * - Operational hours validation applies
+ * - Holiday validation applies
+ * 
+ * SUCCESS FLOW:
+ * 1. Super Admin fills form
+ * 2. Uploads PDF letter
+ * 3. Submit form
+ * 4. Server validates all inputs
+ * 5. Creates booking record with is_external = 1
+ * 6. Stores PDF in assets/uploads/docs/
+ * 7. Alert success, refresh page
+ * 8. New booking appears in Mendatang tab
+ * 
+ * ERROR HANDLING:
+ * - Invalid PDF → alert "Hanya file PDF yang diperbolehkan!"
+ * - File too large → alert "Ukuran file maksimal 25MB!"
+ * - Time conflict → alert "Jadwal bentrok dengan booking lain!"
+ * - Past datetime → alert "Tidak bisa booking di waktu lampau!"
+ * - Missing fields → HTML5 validation + server-side check
+ * 
+ * SECURITY:
+ * - Super Admin only (strict role check)
+ * - MIME type validation (PDF only)
+ * - File size limit (25MB)
+ * - Unique filenames (prevent overwrites)
+ * - Time slot conflict prevention
+ * - XSS prevention (htmlspecialchars on outputs)
+ * 
+ * INTEGRATION:
+ * - Controller: AdminController (booking_external, submit_booking_external, delete_external)
+ * - Model: BookingExternalModel (create, getUpcoming, getHistori, delete)
+ * - Model: RuanganModel (getAll)
+ * - Model: ScheduleModel (isTimeSlotAvailable)
+ * - Database: booking table (with is_external flag)
+ * - Upload: assets/uploads/docs/
+ * 
+ * @package BookEZ
+ * @subpackage Views\Admin
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

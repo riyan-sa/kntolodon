@@ -1,4 +1,71 @@
-<?php require __DIR__ . '/components/head.php'; ?>
+<?php
+/**
+ * ============================================================================
+ * STARTPAGE.PHP - Landing Page View
+ * ============================================================================
+ * 
+ * Landing page pertama yang dilihat user saat mengakses aplikasi.
+ * Menampilkan welcome message dan 2 CTA buttons (Login & Register).
+ * 
+ * FITUR:
+ * - Welcome message dengan tagline
+ * - Login button → redirects ke login page
+ * - Register button → redirects ke register page
+ * - Responsive layout: 2 columns on desktop (40% content, 60% image),
+ *   single column on mobile
+ * - SVG decorative background pattern
+ * 
+ * JAVASCRIPT:
+ * - assets/js/startpage.js: Event listeners untuk buttons
+ * - Pattern: document.getElementById('btn-login').addEventListener('click', ...)
+ * - NO inline onclick handlers
+ * 
+ * LAYOUT STRUCTURE:
+ * - Left column (lg:w-2/5): Content area
+ *   - Logo (300x300px)
+ *   - Welcome text: "Selamat Datang"
+ *   - Tagline: "Pesan tempat studi pribadimu..."
+ *   - Login button (primary, blue bg)
+ *   - Register button (secondary, blue border)
+ *   - Copyright text (absolute bottom)
+ * - Right column (lg:w-3/5): Decorative SVG pattern (hidden on mobile)
+ * 
+ * TARGET ELEMENTS:
+ * - #btn-login: Login button
+ * - #btn-register: Register button
+ * 
+ * ROUTING:
+ * - URL: index.php?page=home (default route)
+ * - Route handler: index.php (no controller, renders directly)
+ * - Login redirect: index.php?page=login
+ * - Register redirect: index.php?page=register
+ * 
+ * ASSETS:
+ * - Logo: assets/image/logo.png
+ * - SVG pattern: Inline SVG with gradient fill
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Full width single column
+ * - Desktop (lg): Split 2/5 content, 3/5 decorative image
+ * - Padding: p-12 on mobile, lg:p-20 on desktop
+ * 
+ * STYLING:
+ * - Buttons: Rounded-full (pill-shaped)
+ * - Shadow: shadow-lg on primary button
+ * - Hover effects: bg-blue-700 (login), bg-blue-50 (register)
+ * - Transitions: duration-300
+ * 
+ * INTEGRATION:
+ * - Session: None required (public page)
+ * - Auth check: None (landing page accessible to all)
+ * - Next steps: User chooses login or register
+ * 
+ * @package BookEZ
+ * @subpackage Views
+ * @version 1.0
+ */
+require __DIR__ . '/components/head.php';
+?>
 
 <title>Selamat datang di Website Book EZ</title>
 </head>

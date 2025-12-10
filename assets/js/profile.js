@@ -1,3 +1,113 @@
+/**
+ * ============================================================================
+ * PROFILE.JS - User Profile Page Scripts
+ * ============================================================================
+ * 
+ * Module untuk menangani user profile page interactions:
+ * - Tab switching (Kode Booking, History, Pelanggaran)
+ * - Foto profil upload modal dengan preview
+ * - Change password modal
+ * - Auto-switch tab based on URL parameters (pagination persistence)
+ * 
+ * FUNGSI UTAMA:
+ * 1. TAB SWITCHING
+ *    - switchTab(tabName): Toggle between 3 tabs
+ *    - Show/hide content containers
+ *    - Update button styles (border highlight)
+ *    - Different display modes: block (booking) vs grid (history, pelanggaran)
+ * 
+ * 2. FOTO PROFIL UPLOAD MODAL
+ *    - Click avatar container → open modal
+ *    - File input change → preview image before upload
+ *    - Submit → upload to server → update session
+ *    - Close via X button, cancel button, or overlay click
+ * 
+ * 3. CHANGE PASSWORD MODAL
+ *    - Click \"Ganti Password\" button → open modal
+ *    - Form validation: old password, new password, confirmation
+ *    - Server-side verification dan update
+ *    - Close via X button, cancel button, or overlay click
+ * 
+ * 4. AUTO-SWITCH TAB (URL PARAMS)
+ *    - Read pg_history or pg_pelanggaran from URL
+ *    - Auto-switch to corresponding tab on page load
+ *    - Maintains tab state after pagination navigation
+ * 
+ * TAB STRUCTURE:
+ * - booking: Active booking card (if exists)
+ * - history: Paginated booking history (SELESAI, DIBATALKAN, HANGUS)
+ * - pelanggaran: Paginated violation records
+ * 
+ * TARGET ELEMENTS (TABS):
+ * - [data-tab-switch]: Tab button elements
+ * - #tab-{name}: Tab button (booking, history, pelanggaran)
+ * - #content-{name}: Tab content container
+ * 
+ * TARGET ELEMENTS (FOTO PROFIL MODAL):
+ * - #avatarContainer: Avatar image (clickable trigger)
+ * - #modalUploadFoto: Modal container
+ * - #closeModalFoto: Close button
+ * - #cancelUploadFoto: Cancel button
+ * - #fotoProfil: File input
+ * - #previewImage: Image preview element
+ * - #previewIcon: Placeholder icon (removed on preview)
+ * - #previewContainer: Container untuk preview
+ * 
+ * TARGET ELEMENTS (CHANGE PASSWORD MODAL):
+ * - #btn-change-password: Trigger button
+ * - #modalChangePassword: Modal container
+ * - #closeModalChangePassword: Close button
+ * - #cancelChangePassword: Cancel button
+ * - #formChangePassword: Form element
+ * 
+ * IMAGE PREVIEW PATTERN:
+ * 1. User selects file
+ * 2. FileReader reads file as Data URL
+ * 3. Create/update <img> element with preview
+ * 4. Remove placeholder icon if exists
+ * 5. On submit → upload actual file to server
+ * 
+ * FILE UPLOAD:
+ * - Server endpoint: ?page=profile&action=upload_foto
+ * - Max size: 25MB
+ * - Allowed types: JPEG, PNG, WebP
+ * - Storage: assets/uploads/images/
+ * - Filename: profile_{nomor_induk}_{timestamp}.{ext}
+ * - Old foto auto-deleted on new upload
+ * 
+ * PASSWORD CHANGE:
+ * - Server endpoint: ?page=profile&action=change_password
+ * - Validation: old password verification, min 8 chars, match confirmation
+ * - Password hashing: Server-side via password_hash()
+ * - Prevent reuse: new password !== old password
+ * 
+ * PAGINATION PERSISTENCE:
+ * - URL params: pg_history={n}, pg_pelanggaran={n}
+ * - DOMContentLoaded: Check params → auto-switch tab
+ * - Maintains tab state when navigating paginated results
+ * 
+ * USAGE:
+ * - Included in: view/profile/index.php
+ * - Initializes on DOM ready
+ * - Event delegation untuk dynamically loaded content
+ * 
+ * @module profile
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
+
+// ==================== TAB SWITCHING ====================
+
+/**
+ * Switch between profile tabs (Kode Booking, History, Pelanggaran)
+ * 
+ * Hides all tab contents dan shows selected tab.
+ * Updates button styles untuk visual feedback.
+ * Uses different display modes: block vs grid.
+ * 
+ * @function switchTab
+ * @param {string} tabName - Name of tab to show ('booking', 'history', or 'pelanggaran')
+ */
 function switchTab(tabName) {
     // 1. Sembunyikan semua konten
     document.getElementById('content-booking').classList.add('hidden');

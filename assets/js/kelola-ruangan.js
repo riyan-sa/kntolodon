@@ -1,16 +1,153 @@
 /**
- * kelola-ruangan.js
- * JavaScript untuk halaman Kelola Ruangan - Admin
- * Handle modal toggle, form validation, dan image preview (tanpa AJAX)
+ * ============================================================================
+ * KELOLA-RUANGAN.JS - Room Management Scripts
+ * ============================================================================
+ * 
+ * Module untuk menangani room management page (Admin/Super Admin):
+ * - CRUD modals (Add, Edit, Delete) dengan event delegation
+ * - Image preview before upload
+ * - Form validation
+ * - Data initialization dari data attributes (NO inline scripts)
+ * 
+ * FUNGSI UTAMA:
+ * 1. ADD ROOM MODAL
+ *    - openAddModal(): Show modal dengan empty form
+ *    - closeAddModal(): Hide modal dan reset form
+ *    - Form submission: POST to ?page=admin&action=tambah_ruangan
+ * 
+ * 2. EDIT ROOM MODAL
+ *    - openEditModal(roomId): Show modal dengan populated form
+ *    - Fetch room data dari window.ROOMS_DATA
+ *    - Display current photo if exists
+ *    - Form submission: POST to ?page=admin&action=update_ruangan
+ * 
+ * 3. DELETE ROOM MODAL
+ *    - openDeleteModal(roomId): Show confirmation modal
+ *    - Display room name for confirmation
+ *    - Form submission: POST to ?page=admin&action=delete_ruangan
+ * 
+ * 4. IMAGE PREVIEW
+ *    - previewImage(event, targetId): Preview selected image before upload
+ *    - Uses FileReader API untuk read file as Data URL
+ *    - Updates preview container dengan <img> element
+ *    - Works untuk both Add dan Edit modals
+ * 
+ * 5. FORM VALIDATION
+ *    - setupFormValidation(): Client-side validation rules
+ *    - Required fields check
+ *    - Capacity validation: min < max
+ *    - File type validation: image only
+ *    - File size validation: max 5MB
+ * 
+ * 6. EVENT DELEGATION
+ *    - .btn-edit-room: Edit buttons (data-room-id attribute)
+ *    - .btn-delete-room: Delete buttons (data-room-id attribute)
+ *    - .btn-close-*-modal: Close buttons untuk each modal
+ *    - .input-file-*: File inputs dengan preview
+ * 
+ * DATA INITIALIZATION:
+ * - ROOMS_DATA: Array of room objects from server
+ * - ASSET_BASE_PATH: Base path untuk asset URLs
+ * - Passed via #rooms-data div dengan data attributes
+ * - Pattern: data-rooms (JSON), data-base-path (string)
+ * 
+ * MODAL STRUCTURE:
+ * - addModal: Empty form untuk create new room
+ * - editModal: Pre-populated form untuk update existing room
+ * - deleteModal: Confirmation dialog dengan room name
+ * 
+ * FORM FIELDS:
+ * - nama_ruangan: Room name (text, required)
+ * - jenis_ruangan: Room type (select: Ruang Umum, Ruang Rapat)
+ * - minimal_kapasitas: Min capacity (number, required)
+ * - maksimal_kapasitas: Max capacity (number, required)
+ * - status_ruangan: Status (select: Tersedia, Tidak Tersedia, Sedang Digunakan)
+ * - deskripsi: Description (textarea, optional)
+ * - tata_tertib: Rules (textarea, optional)
+ * - foto_ruangan: Photo (file, optional, max 5MB)
+ * 
+ * VALIDATION RULES:
+ * - nama_ruangan: Required, non-empty
+ * - minimal_kapasitas: Required, > 0
+ * - maksimal_kapasitas: Required, > minimal_kapasitas
+ * - foto_ruangan: Optional, image only (JPEG/PNG/WebP), max 5MB
+ * 
+ * IMAGE UPLOAD:
+ * - Max size: 5MB (enforced server-side)
+ * - Allowed types: image/jpeg, image/png, image/webp
+ * - Storage: assets/uploads/images/
+ * - Filename pattern: room_{timestamp}_{random}.{ext}
+ * - Old photo auto-deleted on update/delete
+ * 
+ * TARGET ELEMENTS:
+ * - #btn-add-room: Add room button
+ * - #addModal: Add modal container
+ * - #editModal: Edit modal container
+ * - #deleteModal: Delete confirmation modal
+ * - #rooms-data: Data container dengan rooms JSON dan base path
+ * - #addPreview: Image preview container (add modal)
+ * - #editPreview: Image preview container (edit modal)
+ * - #edit_current_photo_container: Current photo display (edit modal)
+ * 
+ * DATA ATTRIBUTES PATTERN:
+ * - data-room-id: Room ID untuk edit/delete actions
+ * - data-rooms: JSON string dengan room data array
+ * - data-base-path: Base path untuk asset URLs
+ * - data-preview-target: Target element ID untuk image preview
+ * 
+ * EVENT LISTENERS:
+ * - DOMContentLoaded: Initialize data dan event listeners
+ * - click: Event delegation untuk all buttons
+ * - change: File input change untuk image preview
+ * - submit: Form validation before submission
+ * 
+ * CSS CLASSES:
+ * - hidden: Display none
+ * - flex: Display flex (for modals)
+ * - btn-edit-room: Edit button styling
+ * - btn-delete-room: Delete button styling
+ * 
+ * FORM SUBMISSIONS:
+ * - All forms use traditional POST (no AJAX)
+ * - Server-side validation dan file handling
+ * - Redirect back to kelola_ruangan after success
+ * - Error alerts dari server via JavaScript alert()
+ * 
+ * USAGE:
+ * - Included in: view/admin/kelola_ruangan.php
+ * - Access: Admin and Super Admin
+ * - Initializes on DOM ready
+ * 
+ * INTEGRATION:
+ * - Server: AdminController::tambah_ruangan(), update_ruangan(), delete_ruangan()
+ * - Database: ruangan table
+ * - Model: RuanganModel (CRUD operations)
+ * 
+ * @module kelola-ruangan
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
  */
 
 // ==================== DATA INITIALIZATION ====================
 
-// Initialize global variables from data attributes
+/**
+ * Global rooms data array
+ * Populated from #rooms-data div's data-rooms attribute
+ * @type {Array<Object>}
+ */
 let ROOMS_DATA = [];
+
+/**
+ * Global asset base path
+ * Used for constructing image URLs
+ * @type {string}
+ */
 let ASSET_BASE_PATH = '';
 
-// Load data when DOM is ready
+/**
+ * Load data when DOM is ready
+ * Reads JSON data dari data attributes (NO inline scripts pattern)
+ */
 document.addEventListener('DOMContentLoaded', function() {
     const dataContainer = document.getElementById('rooms-data');
     if (dataContainer) {

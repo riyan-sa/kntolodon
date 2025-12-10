@@ -1,19 +1,92 @@
 <?php
+/**
+ * ============================================================================
+ * MEMBERMODEL.PHP - Member Management Model (Admin Area)
+ * ============================================================================
+ * 
+ * Model untuk CRUD operations pada member management (admin area).
+ * Mengelola Users (Mahasiswa/Dosen/Tenaga Pendidikan) dan Admins.
+ * 
+ * FUNGSI UTAMA:
+ * 1. CREATE - Tambah user baru atau admin baru
+ * 2. READ - Fetch members by type (user/admin), search, filter
+ * 3. UPDATE - Update member data, status, password
+ * 4. DELETE - Soft/hard delete member accounts
+ * 5. VALIDATION - Check uniqueness (email, NIM/NIP)
+ * 6. ACTIVATE/DEACTIVATE - Toggle member status
+ * 
+ * MEMBER TYPES:
+ * - USERS: Mahasiswa, Dosen, Tenaga Pendidikan (role='User' in new schema)
+ * - ADMINS: Admin, Super Admin
+ * 
+ * DATABASE TABLE: akun
+ * PRIMARY KEY: nomor_induk (NIM for users, NIP for admins)
+ * 
+ * RELASI DATABASE:
+ * - akun -> anggota_booking (1:N) via nomor_induk (booking participants)
+ * - akun -> pelanggaran_suspensi (1:N) via nomor_induk (violations)
+ * 
+ * USER FIELDS:
+ * - nomor_induk: NIM (student ID) or NIP (employee ID)
+ * - username: Display name
+ * - email: PNJ domain email (validated)
+ * - password: Hashed with password_hash()
+ * - status: 'Aktif' or 'Tidak Aktif'
+ * - role: 'Mahasiswa'|'Dosen'|'Tenaga Pendidikan'|'User'|'Admin'|'Super Admin'
+ * - jurusan: Only for Mahasiswa (e.g., 'TIK')
+ * - prodi: Only for Mahasiswa (e.g., 'D4 Teknik Informatika')
+ * - foto_profil: Path to profile photo (assets/uploads/images/)
+ * - validasi_mahasiswa: Screenshot KubacaPNJ for students
+ * 
+ * ADMIN vs USER:
+ * - Admins: NO jurusan, prodi, validasi_mahasiswa (set to NULL)
+ * - Users: CAN have jurusan, prodi, validasi_mahasiswa
+ * - Email validation different: admins use @jurusan.pnj.ac.id or @pnj.ac.id
+ * 
+ * STATUS MANAGEMENT:
+ * - 'Aktif': Can login and use system
+ * - 'Tidak Aktif': New accounts default, requires admin activation
+ * - activate(): Set status to 'Aktif'
+ * - deactivate(): Set status to 'Tidak Aktif'
+ * 
+ * PAGINATION SUPPORT:
+ * - filterUsers(): Paginated user list with search
+ * - filterAdmins(): Paginated admin list with search
+ * - Uses LIMIT + OFFSET for pagination
+ * - Separate count methods for total records
+ * 
+ * AJAX INTEGRATION:
+ * - AdminController::load_members() uses filter methods
+ * - Returns JSON with paginated data
+ * - Tab switching between User and Admin lists
+ * 
+ * USAGE PATTERNS:
+ * - AdminController::member_list() - Main member management page
+ * - AdminController::create_admin() - Add new admin
+ * - AdminController::update_admin() - Edit admin details
+ * - AdminController::delete_admin() - Remove admin account
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * MemberModel - Model untuk CRUD dan filter member (User dan Admin)
+ * Class MemberModel - Member Management untuk Admin
  * 
- * User: Mahasiswa, Dosen, Tenaga Pendidikan
- * Admin: Admin, Super Admin
- * 
- * Relasi:
- * - akun -> anggota_booking (1:N) via nomor_induk
- * - akun -> pelanggaran_suspensi (1:N) via nomor_induk
+ * @property PDO $pdo Database connection instance
  */
 class MemberModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

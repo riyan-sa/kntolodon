@@ -1,15 +1,83 @@
 <?php
+/**
+ * ============================================================================
+ * RUANGANMODEL.PHP - Room Management Model
+ * ============================================================================
+ * 
+ * Model untuk CRUD operations pada tabel ruangan.
+ * Menangani data ruangan, validasi ketersediaan, dan status ruangan.
+ * 
+ * FUNGSI UTAMA:
+ * 1. CREATE - Tambah ruangan baru dengan foto dan kapasitas
+ * 2. READ - Fetch rooms by jenis, availability, with dynamic status
+ * 3. UPDATE - Update room data, status, foto
+ * 4. DELETE - Soft/hard delete ruangan
+ * 5. FILTER - Filter by jenis, kapasitas, status
+ * 6. VALIDATION - Check time slot availability, capacity validation
+ * 7. AUTO-UPDATE - Update status based on active bookings
+ * 
+ * DATABASE TABLE: ruangan
+ * PRIMARY KEY: id_ruangan (auto-increment)
+ * 
+ * RELASI DATABASE:
+ * - ruangan -> booking (1:N) via id_ruangan (room bookings)
+ * 
+ * JENIS RUANGAN:
+ * - 'Ruang Umum': For regular user bookings (via BookingController)
+ * - 'Ruang Rapat': For external bookings (Super Admin only via AdminController)
+ * 
+ * STATUS RUANGAN:
+ * - 'Tersedia': Room available for booking
+ * - 'Tidak Tersedia': Room disabled or under maintenance
+ * - 'Sedang Digunakan': Auto-set when booking is AKTIF during its time window
+ * 
+ * KAPASITAS:
+ * - minimal_kapasitas_ruangan: Minimum participants required
+ * - maksimal_kapasitas_ruangan: Maximum participants allowed
+ * - Validation: Booking participant count must be between min-max
+ * 
+ * DYNAMIC AVAILABILITY:
+ * - getAllWithDynamicAvailability(): Real-time status check
+ * - Status 'Tidak Tersedia' if booking AKTIF exists in current time window
+ * - Check window: 5 minutes before waktu_mulai to waktu_selesai
+ * 
+ * AUTO-UPDATE BEHAVIOR:
+ * - autoUpdateRoomStatus(): Called at controller entry points
+ * - Updates status based on current datetime vs active bookings
+ * - Pattern: Check if NOW() between waktu_mulai and waktu_selesai
+ * 
+ * FOTO RUANGAN:
+ * - Stored in: assets/uploads/images/
+ * - Format: JPEG/PNG/WebP
+ * - Validation: MIME type check, max 25MB
+ * - Filename pattern: 'foto_' + timestamp + '_' + random_hex + extension
+ * 
+ * USAGE PATTERNS:
+ * - AdminController: Kelola ruangan (CRUD operations)
+ * - BookingController: Select room for booking
+ * - DashboardController: Display available rooms
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * RuanganModel - Model untuk CRUD dan filter ruangan
+ * Class RuanganModel - Room Management dengan dynamic availability
  * 
- * Relasi:
- * - ruangan -> booking (1:N) via id_ruangan
+ * @property PDO $pdo Database connection instance
  */
 class RuanganModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

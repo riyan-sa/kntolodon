@@ -1,4 +1,252 @@
 <?php
+/**
+ * ============================================================================
+ * ADMIN/KELOLA_RUANGAN.PHP - Room Management Page
+ * ============================================================================
+ * 
+ * CRUD interface untuk manage all rooms (Ruang Umum & Ruang Rapat).
+ * Grid layout dengan modals untuk add/edit/delete operations.
+ * 
+ * ACCESS CONTROL:
+ * - Admin & Super Admin only
+ * - Blocks regular User access
+ * 
+ * FEATURES:
+ * 1. ROOM GRID DISPLAY
+ *    - Grid layout: 1 col (mobile), 2 cols (md), 3 cols (lg)
+ *    - Card structure: Photo + Details side-by-side
+ *    - Displays: Foto, Nama, Jenis, Kapasitas, Status
+ *    - Action buttons: Edit, Delete
+ * 
+ * 2. ADD ROOM (Modal)
+ *    - Button: FAB (Floating Action Button) at bottom-right
+ *    - Modal form dengan all room fields
+ *    - Photo upload: Optional, max 5MB
+ *    - Submit: Creates new room record
+ * 
+ * 3. EDIT ROOM (Modal)
+ *    - Triggered: Click edit icon on room card
+ *    - Pre-populated form dengan existing data
+ *    - Shows current photo if exists
+ *    - Can upload new photo (replaces old)
+ *    - Submit: Updates room record
+ * 
+ * 4. DELETE ROOM (Modal)
+ *    - Triggered: Click delete icon on room card
+ *    - Confirmation dialog dengan room name
+ *    - Warning: "Tindakan ini tidak dapat diurungkan"
+ *    - Submit: Deletes room + associated photo
+ * 
+ * 5. IMAGE PREVIEW
+ *    - Live preview before upload
+ *    - Uses FileReader API
+ *    - Works untuk both Add and Edit modals
+ *    - Target containers: #addPreview, #editPreview
+ * 
+ * DATA FROM CONTROLLER:
+ * - $rooms (array): All room records dari RuanganModel::getAll()
+ * - Each room contains: id, nama, jenis, kapasitas (min/max), status, deskripsi, tata_tertib, foto
+ * 
+ * ROOM DATA STRUCTURE:
+ * $room = [
+ *   'id_ruangan' => int,
+ *   'nama_ruangan' => string,
+ *   'jenis_ruangan' => string ('Ruang Umum', 'Ruang Rapat'),
+ *   'minimal_kapasitas_ruangan' => int,
+ *   'maksimal_kapasitas_ruangan' => int,
+ *   'status_ruangan' => string ('Tersedia', 'Sedang Digunakan', 'Tidak Tersedia'),
+ *   'deskripsi' => string|null,
+ *   'tata_tertib' => string|null,
+ *   'foto_ruangan' => string|null (path)
+ * ];
+ * 
+ * ROOM CARD STRUCTURE:
+ * - Photo section (left): w-full md:w-5/12
+ *   - Image or placeholder
+ *   - Aspect ratio maintained
+ * - Details section (right): w-full md:w-7/12
+ *   - Nama ruangan (heading)
+ *   - Jenis badge (Umum: blue, Rapat: purple)
+ *   - Kapasitas line (min-max orang)
+ *   - Status badge (color-coded)
+ *   - Action buttons (Edit, Delete)
+ * 
+ * FAB (Floating Action Button):
+ * - Position: fixed bottom-8 right-8
+ * - Icon: Plus sign
+ * - Color: Blue (bg-blue-600)
+ * - Hover: bg-blue-700 + shadow-xl
+ * - Z-index: z-50
+ * - Triggers: Add modal
+ * 
+ * MODALS (3 types):
+ * 1. ADD MODAL (#addModal)
+ *    - Empty form
+ *    - All fields editable
+ *    - Photo upload optional
+ *    - Submit: ?page=admin&action=tambah_ruangan
+ * 
+ * 2. EDIT MODAL (#editModal)
+ *    - Pre-filled form
+ *    - Shows current photo
+ *    - Hidden id_ruangan field
+ *    - Photo upload replaces old
+ *    - Submit: ?page=admin&action=update_ruangan
+ * 
+ * 3. DELETE MODAL (#deleteModal)
+ *    - Confirmation only
+ *    - Shows room name
+ *    - Hidden id_ruangan field
+ *    - Submit: ?page=admin&action=delete_ruangan
+ * 
+ * FORM FIELDS (Add/Edit):
+ * - nama_ruangan (text, required): Room name
+ * - jenis_ruangan (select, required): Ruang Umum / Ruang Rapat
+ * - minimal_kapasitas (number, required): Min capacity (> 0)
+ * - maksimal_kapasitas (number, required): Max capacity (> min)
+ * - status_ruangan (select, required): Tersedia / Tidak Tersedia / Sedang Digunakan
+ * - deskripsi (textarea, optional): Room description
+ * - tata_tertib (textarea, optional): Room rules
+ * - foto_ruangan (file, optional): Room photo (image only, max 5MB)
+ * 
+ * FORM VALIDATION:
+ * - Client-side (JavaScript):
+ *   * Required fields check
+ *   * maksimal_kapasitas > minimal_kapasitas
+ *   * File type check (image only)
+ *   * File size check (max 5MB)
+ * - Server-side (Controller):
+ *   * All client validations re-checked
+ *   * MIME type validation (image/jpeg, image/png, image/webp)
+ *   * File size strict limit (25MB server max)
+ *   * Unique nama_ruangan check (optional)
+ * 
+ * PHOTO UPLOAD:
+ * - Max size: 5MB (client), 25MB (server)
+ * - Allowed: JPEG, PNG, WebP
+ * - Storage: assets/uploads/images/
+ * - Filename: room_{timestamp}_{random}.{ext}
+ * - Old photo: Auto-deleted on update/delete
+ * 
+ * TARGET ELEMENTS:
+ * - #btn-add-room: FAB button
+ * - #addModal: Add modal container
+ * - #editModal: Edit modal container
+ * - #deleteModal: Delete modal container
+ * - .btn-edit-room: Edit buttons (data-room-id)
+ * - .btn-delete-room: Delete buttons (data-room-id)
+ * - #rooms-data: Data container (data-rooms JSON, data-base-path)
+ * 
+ * JAVASCRIPT:
+ * - assets/js/kelola-ruangan.js: Modal management, image preview, form validation
+ * - Functions:
+ *   * openAddModal(): Show add modal
+ *   * openEditModal(roomId): Show edit modal dengan data
+ *   * openDeleteModal(roomId): Show delete confirmation
+ *   * closeModal(): Hide all modals
+ *   * previewImage(event, targetId): Image preview
+ * 
+ * DATA ATTRIBUTES PATTERN:
+ * ```php
+ * <div id="rooms-data" 
+ *      data-rooms='<?= json_encode($rooms) ?>'
+ *      data-base-path="<?= $basePath ?>"
+ *      style="display:none;">
+ * </div>
+ * ```
+ * - Passes PHP data to JavaScript
+ * - NO inline script blocks pattern
+ * 
+ * ROUTING:
+ * - View: ?page=admin&action=kelola_ruangan
+ * - Add: POST to ?page=admin&action=tambah_ruangan
+ * - Edit: POST to ?page=admin&action=update_ruangan
+ * - Delete: POST to ?page=admin&action=delete_ruangan
+ * 
+ * STATUS BADGES:
+ * - Tersedia: Green (bg-green-100 text-green-800)
+ * - Sedang Digunakan: Yellow (bg-yellow-100 text-yellow-800)
+ * - Tidak Tersedia: Red (bg-red-100 text-red-800)
+ * 
+ * JENIS BADGES:
+ * - Ruang Umum: Blue (bg-blue-100 text-blue-800)
+ * - Ruang Rapat: Purple (bg-purple-100 text-purple-800)
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Cards stack vertically, photo on top
+ * - Tablet (md): 2 column grid, photo left, details right
+ * - Desktop (lg): 3 column grid
+ * - Modals: Full screen mobile, max-w-md desktop
+ * 
+ * CSS:
+ * - External: assets/css/kelola-ruangan.css
+ * - Tailwind utilities
+ * - Card hover effects: hover:shadow-md
+ * - FAB shadow: shadow-lg hover:shadow-xl
+ * 
+ * PLACEHOLDER IMAGE:
+ * - Used when: foto_ruangan is NULL or empty
+ * - Path: assets/image/room.png
+ * - Pattern: $fotoRuangan = !empty($room['foto_ruangan']) ? ... : $defaultImage;
+ * 
+ * SUCCESS FLOW (Add):
+ * 1. Click FAB button
+ * 2. Modal opens dengan empty form
+ * 3. Fill all required fields
+ * 4. Upload photo (optional)
+ * 5. Submit form
+ * 6. Server validates
+ * 7. Creates room record
+ * 8. Uploads photo if provided
+ * 9. Alert success, reload page
+ * 10. New room appears in grid
+ * 
+ * SUCCESS FLOW (Edit):
+ * 1. Click edit icon on room card
+ * 2. Modal opens with pre-filled data
+ * 3. Modify fields as needed
+ * 4. Upload new photo (optional, replaces old)
+ * 5. Submit form
+ * 6. Server validates
+ * 7. Updates room record
+ * 8. Replaces photo if new uploaded
+ * 9. Deletes old photo
+ * 10. Alert success, reload page
+ * 
+ * SUCCESS FLOW (Delete):
+ * 1. Click delete icon on room card
+ * 2. Confirmation modal appears
+ * 3. Click "Hapus" button
+ * 4. Server validates
+ * 5. Checks: No active bookings (should implement)
+ * 6. Deletes room record
+ * 7. Deletes associated photo
+ * 8. Alert success, reload page
+ * 
+ * ERROR HANDLING:
+ * - Invalid capacity → alert "Kapasitas maksimal harus lebih dari minimal!"
+ * - Invalid file type → alert "Hanya gambar yang diperbolehkan!"
+ * - File too large → alert "Ukuran file maksimal 5MB!"
+ * - Duplicate name → alert "Nama ruangan sudah ada!"
+ * - Missing fields → HTML5 validation + server check
+ * 
+ * SECURITY:
+ * - Admin/Super Admin access only
+ * - File upload: MIME validation, size limit
+ * - Unique filenames: Prevent overwrites
+ * - Photo deletion: Removes old file on update/delete
+ * - XSS prevention: htmlspecialchars on outputs
+ * 
+ * INTEGRATION:
+ * - Controller: AdminController (kelola_ruangan, tambah_ruangan, update_ruangan, delete_ruangan)
+ * - Model: RuanganModel (getAll, create, update, delete, autoUpdateRoomStatus)
+ * - Database: ruangan table
+ * - Upload: assets/uploads/images/
+ * 
+ * @package BookEZ
+ * @subpackage Views\Admin
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

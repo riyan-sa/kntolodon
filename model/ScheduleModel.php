@@ -1,15 +1,94 @@
 <?php
+/**
+ * ============================================================================
+ * SCHEDULEMODEL.PHP - Booking Schedule Management Model
+ * ============================================================================
+ * 
+ * Model untuk CRUD operations pada jadwal booking dan reschedule management.
+ * Menangani time slot allocation, conflict detection, dan reschedule workflow.
+ * 
+ * FUNGSI UTAMA:
+ * 1. CREATE - Buat jadwal awal atau reschedule baru
+ * 2. READ - Fetch schedules by booking, room, date dengan conflict check
+ * 3. UPDATE - Reschedule dengan validasi 1-jam minimum notice
+ * 4. DELETE - Hapus jadwal (cascade delete via booking)
+ * 5. VALIDATION - Time slot availability, overlap detection, operational hours
+ * 6. CONFLICT DETECTION - Check existing bookings untuk timeline display
+ * 
+ * DATABASE TABLE: schedule
+ * PRIMARY KEY: id_schedule (auto-increment)
+ * FOREIGN KEYS:
+ * - id_booking → booking.id_booking (which booking this schedule belongs to)
+ * 
+ * RELASI DATABASE:
+ * - schedule -> booking (N:1) via id_booking (one booking can have multiple schedules)
+ * 
+ * STATUS SCHEDULE:
+ * - 'AKTIF': Current active schedule for booking
+ * - 'DIRESCHEDULE': Old schedule replaced by reschedule
+ * - 'DIBATALKAN': Cancelled schedule
+ * 
+ * RESCHEDULE WORKFLOW:
+ * 1. User requests reschedule dengan alasan
+ * 2. Validate: minimum 1 hour before waktu_mulai
+ * 3. Validate: no check-in has occurred yet
+ * 4. Old schedule → status 'DIRESCHEDULE'
+ * 5. New schedule created with status 'AKTIF'
+ * 6. Booking remains same, only time changed
+ * 
+ * TIME SLOT VALIDATION:
+ * - isTimeSlotAvailable(): Check no conflicting bookings exist
+ * - Overlap detection: Check all AKTIF bookings for same room/date
+ * - Buffer time: No specific buffer (can book back-to-back)
+ * 
+ * OPERATIONAL HOURS INTEGRATION:
+ * - validateWaktuOperasi(): Check against waktu_operasi table
+ * - validateHariLibur(): Check against hari_libur table
+ * - Enforcement: Booking creation blocked if outside operational hours
+ * 
+ * DATETIME FORMAT:
+ * - tanggal_schedule: DATE (YYYY-MM-DD)
+ * - waktu_mulai: TIME (HH:MM:SS)
+ * - waktu_selesai: TIME (HH:MM:SS)
+ * 
+ * CRITICAL RULES:
+ * 1. ONE AKTIF SCHEDULE PER BOOKING - Only current time slot is AKTIF
+ * 2. RESCHEDULE LIMIT - Minimum 1 hour before waktu_mulai
+ * 3. NO RESCHEDULE AFTER CHECK-IN - Cannot reschedule if any member checked-in
+ * 4. PAST VALIDATION - Cannot book or reschedule to past datetime
+ * 
+ * CONFLICT DETECTION LOGIC:
+ * - Two bookings conflict if:
+ *   (start1 < end2) AND (end1 > start2)
+ * - Used in: getSchedulesByRoomAndDate() for timeline display
+ * - Visual feedback: assets/js/booking.js shows occupied time slots
+ * 
+ * USAGE PATTERNS:
+ * - BookingController: Create initial schedule, request reschedule
+ * - AdminController: View all schedules, manage time slots
+ * - DashboardController: Display upcoming schedules
+ * 
+ * @package BookEZ
+ * @version 1.0
+ * @author PBL-Perpustakaan Team
+ */
 
 /**
- * ScheduleModel - Model untuk CRUD jadwal booking dan reschedule
+ * Class ScheduleModel - Schedule Management dengan reschedule support
  * 
- * Relasi:
- * - schedule -> booking (N:1) via id_booking
+ * @property PDO $pdo Database connection instance
  */
 class ScheduleModel
 {
+    /**
+     * PDO instance untuk database operations
+     * @var PDO
+     */
     private PDO $pdo;
 
+    /**
+     * Constructor - Initialize PDO connection
+     */
     public function __construct()
     {
         $koneksi = new Koneksi();

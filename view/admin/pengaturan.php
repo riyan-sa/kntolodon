@@ -1,4 +1,249 @@
 <?php
+/**
+ * ============================================================================
+ * ADMIN/PENGATURAN.PHP - System Settings (Super Admin Only)
+ * ============================================================================
+ * 
+ * System-wide configuration page untuk operational hours & holidays.
+ * Two tabs: Waktu Operasi (7 days) & Hari Libur (dynamic list).
+ * Settings enforce booking validation rules across entire system.
+ * 
+ * ACCESS CONTROL:
+ * - Super Admin ONLY (strict check: role === 'Super Admin')
+ * - Blocks Admin access (redirects to admin dashboard)
+ * - Critical: Changes affect all users' booking capabilities
+ * 
+ * FEATURES:
+ * 1. TAB SYSTEM
+ *    - TAB 1: Waktu Operasi (Operational Hours per day)
+ *    - TAB 2: Hari Libur (Holiday/Closure dates)
+ *    - Tab switching via JavaScript
+ *    - Independent content containers
+ * 
+ * 2. WAKTU OPERASI (Operational Hours)
+ *    - 7 cards: Senin - Minggu
+ *    - Each card shows: Jam Buka, Jam Tutup, Status (Aktif/Nonaktif)
+ *    - Edit modal: Update jam_buka, jam_tutup, is_aktif
+ *    - Status toggle: Disables booking for entire day when Nonaktif
+ *    - Validation: jam_tutup > jam_buka
+ * 
+ * 3. HARI LIBUR (Holidays)
+ *    - Dynamic list of closure dates
+ *    - Table: No, Tanggal, Keterangan, Aksi
+ *    - Add: FAB button at bottom-right
+ *    - Edit: Modify tanggal, keterangan
+ *    - Delete: Confirmation modal
+ *    - Blocks bookings on registered dates
+ * 
+ * 4. VALIDATION INTEGRATION
+ *    - validateWaktuOperasi(): Called in BookingController before creation
+ *    - validateHariLibur(): Called in BookingController before creation
+ *    - Returns: ['allowed' => bool, 'message' => string]
+ *    - See: temp/IMPLEMENTASI_PENGATURAN_SISTEM.md
+ * 
+ * DATA FROM CONTROLLER:
+ * - $waktuOperasi (array): 7 records (Senin-Minggu) dengan operational hours
+ * - $hariLibur (array): All registered holidays sorted by tanggal ASC
+ * - $currentTab (string): Active tab ('waktu-operasi' or 'hari-libur')
+ * 
+ * WAKTU OPERASI STRUCTURE:
+ * $waktuOperasi = [
+ *   [
+ *     'id' => int,
+ *     'hari' => string ('Senin', 'Selasa', ..., 'Minggu'),
+ *     'jam_buka' => string (HH:MM:SS),
+ *     'jam_tutup' => string (HH:MM:SS),
+ *     'is_aktif' => int (1 = aktif, 0 = nonaktif)
+ *   ],
+ *   // 7 records total
+ * ];
+ * 
+ * HARI LIBUR STRUCTURE:
+ * $hariLibur = [
+ *   [
+ *     'id' => int,
+ *     'tanggal' => string (YYYY-MM-DD),
+ *     'keterangan' => string (reason/description),
+ *     'created_by' => string (admin nomor_induk)
+ *   ],
+ *   // Dynamic count
+ * ];
+ * 
+ * WAKTU OPERASI CARD:
+ * - Day name (e.g., "Senin") as heading
+ * - Jam Buka & Jam Tutup displayed (formatted HH:MM)
+ * - Status badge:
+ *   * Aktif: Green (bg-green-100 text-green-800)
+ *   * Nonaktif: Red (bg-red-100 text-red-800)
+ * - Edit button: Opens modal with pre-filled data
+ * - Card layout: 1 col (mobile), 2 cols (md), 3 cols (lg), 7 cols (xl)
+ * 
+ * HARI LIBUR TABLE:
+ * - Columns: No, Tanggal, Keterangan, Aksi
+ * - No: Sequential number
+ * - Tanggal: Formatted date (d F Y)
+ * - Keterangan: Holiday description
+ * - Aksi: Edit icon, Delete icon
+ * - Empty state: "Belum ada hari libur terdaftar"
+ * 
+ * MODALS (3 types):
+ * 1. EDIT WAKTU OPERASI MODAL
+ *    - Fields: hari (read-only), jam_buka, jam_tutup, is_aktif (toggle)
+ *    - Validation: jam_tutup > jam_buka
+ *    - Submit: POST to ?page=admin&action=update_waktu_operasi
+ * 
+ * 2. ADD/EDIT HARI LIBUR MODAL
+ *    - Fields: tanggal (date, min=today), keterangan (textarea)
+ *    - Add mode: Empty form
+ *    - Edit mode: Pre-filled data, hidden id field
+ *    - Submit: POST to ?page=admin&action=create_hari_libur or update_hari_libur
+ * 
+ * 3. DELETE HARI LIBUR MODAL
+ *    - Confirmation dialog dengan tanggal & keterangan
+ *    - Warning: "Tindakan ini tidak dapat diurungkan"
+ *    - Submit: POST to ?page=admin&action=delete_hari_libur
+ * 
+ * FORM VALIDATION (Waktu Operasi):
+ * - Client-side (JavaScript):
+ *   * jam_buka required
+ *   * jam_tutup required
+ *   * jam_tutup > jam_buka
+ * - Server-side (Controller):
+ *   * Same validations re-checked
+ *   * Time format validation (HH:MM:SS)
+ *   * is_aktif boolean check
+ * 
+ * FORM VALIDATION (Hari Libur):
+ * - Client-side (JavaScript):
+ *   * tanggal required, min=today (no past dates)
+ *   * keterangan required, max 255 chars
+ * - Server-side (Controller):
+ *   * Date format validation (YYYY-MM-DD)
+ *   * Past date prevention (tanggal >= today)
+ *   * Duplicate date check (optional)
+ *   * created_by = Super Admin nomor_induk
+ * 
+ * FAB (Floating Action Button):
+ * - Position: fixed bottom-8 right-8
+ * - Icon: Plus sign
+ * - Color: Blue (bg-blue-600)
+ * - Z-index: z-50
+ * - Visibility: Only on Hari Libur tab
+ * - Action: Opens Add Hari Libur modal
+ * 
+ * TARGET ELEMENTS:
+ * - [data-tab-action]: Tab buttons (data-tab-name)
+ * - .tab-content: Tab content containers
+ * - #btn-edit-waktu-{hari}: Edit operational hours buttons
+ * - #btn-add-libur: FAB for adding holiday
+ * - [data-action="edit-libur"]: Edit holiday buttons (data-libur-id)
+ * - [data-action="delete-libur"]: Delete holiday buttons (data-libur-id)
+ * - #modal-waktu-operasi: Edit operational hours modal
+ * - #modal-hari-libur: Add/edit holiday modal
+ * - #modal-delete-libur: Delete holiday confirmation modal
+ * 
+ * JAVASCRIPT:
+ * - assets/js/pengaturan.js: Tab switching, modal management
+ * - Functions:
+ *   * switchTab(tabName): Change active tab
+ *   * openWaktuModal(hari, data): Show edit operational hours modal
+ *   * openLiburModal(mode, data): Show add/edit holiday modal
+ *   * openDeleteLiburModal(id, tanggal, keterangan): Show delete confirmation
+ *   * closeModal(): Hide all modals
+ *   * validateWaktuForm(): Validate operational hours form
+ *   * validateLiburForm(): Validate holiday form
+ * 
+ * DATA ATTRIBUTES PATTERN:
+ * ```php
+ * <div id="pengaturan-data"
+ *      data-base-path="<?= $basePath ?>"
+ *      data-waktu-operasi='<?= json_encode($waktuOperasi) ?>'
+ *      data-hari-libur='<?= json_encode($hariLibur) ?>'
+ *      style="display:none;">
+ * </div>
+ * ```
+ * 
+ * CSS:
+ * - External: assets/css/pengaturan.css
+ * - Tailwind utilities
+ * - Tab styles: tab-active (blue) vs bg-white (inactive)
+ * - Card styles: Rounded, shadow, white background
+ * - Icons: Inline SVG (clock, calendar, edit, delete)
+ * 
+ * ROUTING:
+ * - View: ?page=admin&action=pengaturan&tab={waktu-operasi|hari-libur}
+ * - Update waktu operasi: POST to ?page=admin&action=update_waktu_operasi
+ * - Create hari libur: POST to ?page=admin&action=create_hari_libur
+ * - Update hari libur: POST to ?page=admin&action=update_hari_libur
+ * - Delete hari libur: POST to ?page=admin&action=delete_hari_libur
+ * 
+ * TAB SWITCHING:
+ * - Active tab: tab-active class (bg-blue-600 text-white)
+ * - Inactive tab: bg-white text-gray-600 hover:bg-blue-50
+ * - JavaScript handles content visibility
+ * - URL param: &tab=waktu-operasi or &tab=hari-libur
+ * 
+ * RESPONSIVE DESIGN:
+ * - Mobile: Single column cards, scrollable table
+ * - Tablet (md): 2-column grid for operational hours
+ * - Desktop (lg): 3-column grid
+ * - XL: 7-column grid (one card per day)
+ * - Modals: Full screen mobile, max-w-md desktop
+ * 
+ * BUSINESS RULES:
+ * - Waktu Operasi: is_aktif = 0 blocks ALL bookings for that day
+ * - Hari Libur: Registered dates block ALL bookings
+ * - Validation enforced in: BookingController::buat_booking()
+ * - Booking form JS can fetch operational hours to disable unavailable slots
+ * - Dashboard shows "Perpustakaan tutup" message on nonaktif days
+ * 
+ * SUCCESS FLOW (Edit Waktu Operasi):
+ * 1. Super Admin clicks edit on Senin card
+ * 2. Modal opens with current jam_buka, jam_tutup, is_aktif
+ * 3. Updates: jam_tutup from 17:00 to 18:00
+ * 4. Validates: jam_tutup > jam_buka
+ * 5. Submit to server
+ * 6. Server updates waktu_operasi record
+ * 7. Alert success, reload page
+ * 8. Card shows updated time
+ * 9. Booking validation now uses new hours
+ * 
+ * SUCCESS FLOW (Add Hari Libur):
+ * 1. Super Admin clicks FAB on Hari Libur tab
+ * 2. Modal opens with empty form
+ * 3. Fills: tanggal = 2025-12-25, keterangan = "Natal"
+ * 4. Validates: tanggal >= today, keterangan not empty
+ * 5. Submit to server
+ * 6. Server creates hari_libur record with created_by
+ * 7. Alert success, reload page
+ * 8. New holiday appears in table
+ * 9. Booking validation blocks 2025-12-25
+ * 
+ * ERROR HANDLING:
+ * - jam_tutup <= jam_buka → alert "Jam tutup harus lebih dari jam buka!"
+ * - Past date for holiday → alert "Tidak bisa menambah hari libur di masa lampau!"
+ * - Duplicate date → alert "Tanggal sudah terdaftar sebagai hari libur!"
+ * - Missing fields → HTML5 validation + server check
+ * - Delete error → alert "Gagal menghapus hari libur!"
+ * 
+ * SECURITY:
+ * - Super Admin only (strict role check)
+ * - Past date prevention for holidays
+ * - Time format validation
+ * - created_by tracking (audit trail)
+ * - XSS prevention: htmlspecialchars on outputs
+ * 
+ * INTEGRATION:
+ * - Controller: AdminController (pengaturan, update_waktu_operasi, create_hari_libur, update_hari_libur, delete_hari_libur)
+ * - Model: PengaturanModel (getWaktuOperasi, updateWaktuOperasi, getHariLibur, createHariLibur, updateHariLibur, deleteHariLibur, validateWaktuOperasi, validateHariLibur)
+ * - Database: waktu_operasi (7 records), hari_libur (dynamic)
+ * - Booking validation: BookingController calls validateWaktuOperasi() and validateHariLibur()
+ * - Migration: temp/MIGRATION_PENGATURAN_SISTEM.sql
+ * 
+ * @package BookEZ
+ * @subpackage Views\Admin
+ * @version 1.0
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
