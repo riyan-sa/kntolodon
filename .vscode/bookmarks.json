@@ -39,6 +39,116 @@
 					"label": "StartPage: 05 (defer)"
 				}
 			]
+		},
+		{
+			"path": "view/login.php",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Login: 01" },
+				{ "line": 161, "column": 0, "label": "Login: 02" }
+			]
+		},
+		{
+			"path": "view/components/captcha.php",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Login: 03" },
+				{ "line": 161, "column": 0, "label": "Register: 03" }
+			]
+		},
+		{
+			"path": "view/components/modal_reset_password.php",
+			"bookmarks": [
+				{ "line": 212, "column": 0, "label": "Login: 04" }
+			]
+		},
+		{
+			"path": "view/components/head.php",
+			"bookmarks": [
+				{ "line": 137, "column": 0, "label": "Login: 05" },
+				{ "line": 131, "column": 0, "label": "Register: 04" }
+			]
+		},
+		{
+			"path": "assets/js/auth.js",
+			"bookmarks": [
+				{ "line": 57, "column": 0, "label": "Login: 06" }
+			]
+		},
+		{
+			"path": "assets/js/captcha.js",
+			"bookmarks": [
+				{ "line": 84, "column": 0, "label": "Login: 07" },
+				{ "line": 98, "column": 0, "label": "Register: 06" }
+			]
+		},
+		{
+			"path": "assets/js/reset-password.js",
+			"bookmarks": [
+				{ "line": 132, "column": 0, "label": "Login: 08" }
+			]
+		},
+		{
+			"path": "controller/LoginController.php",
+			"bookmarks": [
+				{ "line": 125, "column": 0, "label": "Login: 09" }
+			]
+		},
+		{
+			"path": "model/AkunModel.php",
+			"bookmarks": [
+				{ "line": 201, "column": 0, "label": "Login: 10" },
+				{ "line": 110, "column": 0, "label": "Register: 08" }
+			]
+		},
+		{
+			"path": "config/Koneksi.php",
+			"bookmarks": [
+				{ "line": 166, "column": 0, "label": "Login: 11" },
+				{ "line": 145, "column": 0, "label": "Register: 09" }
+			]
+		},
+		{
+			"path": "assets/css/main.css",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Login: 12" },
+				{ "line": 2, "column": 0, "label": "Register: 11" }
+			]
+		},
+		{
+			"path": "temp/test_login_email.php",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Login: 13" }
+			]
+		},
+		{
+			"path": "view/register.php",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Register: 01" },
+				{ "line": 195, "column": 0, "label": "Register: 02" }
+			]
+		},
+		{
+			"path": "assets/js/regis.js",
+			"bookmarks": [
+				{ "line": 142, "column": 0, "label": "Register: 05" }
+			]
+		},
+		{
+			"path": "controller/RegisterController.php",
+			"bookmarks": [
+				{ "line": 136, "column": 0, "label": "Register: 07" }
+			]
+		},
+		{
+			"path": "assets/css/input.css",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Register: 10" }
+			]
+		},
+		{
+			"path": "temp/test_validasi_email_pnj.php",
+			"bookmarks": [
+				{ "line": 1, "column": 0, "label": "Register: 12" }
+			]
 		}
 	]
 }
