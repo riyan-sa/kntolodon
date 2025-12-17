@@ -172,8 +172,8 @@ class RegisterController
         if (!empty($email)) {
             $isValidDomain = false;
             
-            // Untuk mahasiswa: harus @stu.pnj.ac.id
-            if (preg_match('/^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/', $email, $matches)) {
+            // Untuk mahasiswa: harus @stu.pnj.ac.id (terima format umum local-part@stu.pnj.ac.id)
+            if (preg_match('/^[a-zA-Z0-9._%+-]+@stu\.pnj\.ac\.id$/', $email, $matches)) {
                 $isValidDomain = true;
             }
             // Untuk dosen/tenaga pendidik: harus @*.pnj.ac.id atau @pnj.ac.id (bukan @stu.pnj.ac.id)
@@ -184,7 +184,7 @@ class RegisterController
             }
             
             if (!$isValidDomain) {
-                $errors[] = 'Email harus menggunakan domain PNJ. Mahasiswa: nama.x@stu.pnj.ac.id, Dosen: nama@jurusan.pnj.ac.id atau nama@pnj.ac.id';
+                $errors[] = 'Email harus menggunakan domain PNJ. Mahasiswa: @stu.pnj.ac.id, Dosen/Admin: @*.pnj.ac.id atau @pnj.ac.id';
             }
         }
 

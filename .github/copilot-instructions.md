@@ -176,7 +176,7 @@ The helper handles both XAMPP root deploys and subfolder deploys automatically.
   ```
 - **Password Policy:** Minimum 8 characters enforced during registration/account creation
 - **Email Domain Validation:** CRITICAL - All emails must use PNJ domain
-  - **Mahasiswa/User:** `nama.x@stu.pnj.ac.id` (any single alphanumeric character before @stu.pnj.ac.id)
+    - **Mahasiswa/User:** `*@stu.pnj.ac.id` (contoh: `nama@stu.pnj.ac.id`, `nama.nim@stu.pnj.ac.id` — local-part fleksibel)
     - Examples: `maulana.ibrahim.a@stu.pnj.ac.id`, `budi.santoso.1@stu.pnj.ac.id`
   - **Dosen/Admin/Staff:** `nama@jurusan.pnj.ac.id` or `nama@pnj.ac.id` (NOT @stu.pnj.ac.id)
     - Examples: `euis.oktavianti@tik.pnj.ac.id`, `admin@pnj.ac.id`

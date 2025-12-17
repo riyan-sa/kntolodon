@@ -1201,7 +1201,8 @@ function validateEditForm() {
     }
     
     // Validasi domain email PNJ
-    const mahasiswaPattern = /^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/;
+    // Terima format umum local-part@stu.pnj.ac.id untuk mahasiswa
+    const mahasiswaPattern = /^[a-zA-Z0-9._%+-]+@stu\.pnj\.ac\.id$/;
     const dosenPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.pnj\.ac\.id$/;
     const pnjDirectPattern = /^[a-zA-Z0-9._%+-]+@pnj\.ac\.id$/;
     const stuPattern = /@stu\.pnj\.ac\.id$/;
