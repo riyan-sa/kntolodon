@@ -402,7 +402,7 @@ class AdminController
         $akunModel = new AkunModel();
         
         // ========== PAGINATION SETUP FOR USER TAB ==========
-        $perPageUser = 10;
+        $perPageUser = 3;
         $currentPageUser = isset($_GET['pg_user']) ? max(1, (int)$_GET['pg_user']) : 1;
         $offsetUser = ($currentPageUser - 1) * $perPageUser;
         
@@ -425,7 +425,7 @@ class AdminController
         $totalPagesUser = ceil($totalUsers / $perPageUser);
         
         // ========== PAGINATION SETUP FOR ADMIN TAB ==========
-        $perPageAdmin = 10;
+        $perPageAdmin = 3;
         $currentPageAdmin = isset($_GET['pg_admin']) ? max(1, (int)$_GET['pg_admin']) : 1;
         $offsetAdmin = ($currentPageAdmin - 1) * $perPageAdmin;
         
@@ -889,8 +889,8 @@ class AdminController
         // Validasi domain email PNJ
         $isValidDomain = false;
         
-        // Untuk mahasiswa/user: harus @stu.pnj.ac.id
-        if (preg_match('/^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/', $email)) {
+        // Untuk mahasiswa/user: harus @stu.pnj.ac.id (terima format umum local-part@stu.pnj.ac.id)
+        if (preg_match('/^[a-zA-Z0-9._%+-]+@stu\.pnj\.ac\.id$/', $email)) {
             $isValidDomain = true;
         }
         // Untuk admin/dosen: harus @*.pnj.ac.id atau @pnj.ac.id (bukan @stu.pnj.ac.id)
@@ -901,7 +901,7 @@ class AdminController
         }
         
         if (!$isValidDomain) {
-            echo "<script>alert('Email harus menggunakan domain PNJ. Mahasiswa: nama.x@stu.pnj.ac.id, Dosen/Admin: nama@jurusan.pnj.ac.id atau nama@pnj.ac.id'); window.location.href='index.php?page=admin&action=member_list';</script>";
+            echo "<script>alert('Email harus menggunakan domain PNJ. Mahasiswa: @stu.pnj.ac.id, Dosen/Admin: @*.pnj.ac.id atau @pnj.ac.id'); window.location.href='index.php?page=admin&action=member_list';</script>";
             exit;
         }
 

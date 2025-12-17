@@ -87,7 +87,8 @@
         const email = emailInput.value.trim();
         
         // Regex untuk validasi domain PNJ
-        const mahasiswaPattern = /^[a-zA-Z0-9._%+-]+\.[a-zA-Z0-9]@stu\.pnj\.ac\.id$/;
+        // Terima format umum local-part@stu.pnj.ac.id (lebih fleksibel untuk alamat mahasiswa)
+        const mahasiswaPattern = /^[a-zA-Z0-9._%+-]+@stu\.pnj\.ac\.id$/;
         const dosenPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.pnj\.ac\.id$/;
         const pnjDirectPattern = /^[a-zA-Z0-9._%+-]+@pnj\.ac\.id$/;
         const stuPattern = /@stu\.pnj\.ac\.id$/;
