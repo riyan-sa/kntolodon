@@ -191,14 +191,14 @@ require __DIR__ . '/../components/head.php';
         <div class="flex flex-col items-center">
             
             <h3 class="text-xl font-bold text-gray-800 mb-4"><?= htmlspecialchars($booking['nama_ruangan']) ?></h3>
-
+<!-- 
             <div class="p-2 border-2 border-black mb-6">
                 <img loading="lazy" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=<?= urlencode($booking['kode_booking'] . '-BookEZ') ?>" 
                      alt="QR Code" 
                      class="w-40 h-40 object-contain">
-            </div>
+            </div> -->
 
-            <div class="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex justify-between items-center mb-6 hover:border-sky-200 transition group cursor-pointer" data-action="copy-code">
+            <div class="w-full bg-white border border-gray-200 flex justify-center rounded-lg shadow-sm p-3 items-center mb-6 hover:border-sky-200 transition group cursor-pointer" data-action="copy-code">
                 <span id="bookingCode" class="text-2xl font-bold text-gray-800 tracking-wide pl-2"><?= htmlspecialchars($booking['kode_booking']) ?></span>
                 
                 <button type="button" class="text-gray-500 group-hover:text-sky-600 transition px-2" title="Salin Kode">
