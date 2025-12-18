@@ -374,13 +374,6 @@ $defaultImage = $asset('/assets/image/room.png');
                             <option value="Ruang Umum">Ruang Umum (Untuk booking user biasa)</option>
                             <option value="Ruang Rapat">Ruang Rapat (Untuk booking eksternal Super Admin)</option>
                         </select>
-                        <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p class="text-xs text-blue-800">
-                                <strong>📌 Penting:</strong><br>
-                                • <strong>Ruang Umum:</strong> User biasa (Mahasiswa/Dosen/Tendik) bisa booking via dashboard<br>
-                                • <strong>Ruang Rapat:</strong> Hanya Super Admin yang bisa booking untuk instansi eksternal (perlu surat resmi)
-                            </p>
-                        </div>
                     </div>
 
                     <!-- Kapasitas -->
@@ -485,13 +478,6 @@ $defaultImage = $asset('/assets/image/room.png');
                             <option value="Ruang Umum">Ruang Umum (Untuk booking user biasa)</option>
                             <option value="Ruang Rapat">Ruang Rapat (Untuk booking eksternal Super Admin)</option>
                         </select>
-                        <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p class="text-xs text-blue-800">
-                                <strong>📌 Penting:</strong><br>
-                                • <strong>Ruang Umum:</strong> User biasa (Mahasiswa/Dosen/Tendik) bisa booking via dashboard<br>
-                                • <strong>Ruang Rapat:</strong> Hanya Super Admin yang bisa booking untuk instansi eksternal (perlu surat resmi)
-                            </p>
-                        </div>
                     </div>
 
                     <!-- Kapasitas -->
