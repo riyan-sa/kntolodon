@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ============================================================================
  * PROFILE/INDEX.PHP - User Profile Page
@@ -238,28 +239,32 @@ require __DIR__ . '/../components/head.php';
 </head>
 
 <body class="bg-gray-50 min-h-screen">
-
-    <!-- NAVBAR -->
-    <nav class="bg-white px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
-        <a href="?page=dashboard" class="flex items-center">
-            <!-- Logo -->
-            <img loading="lazy" src="<?= $asset('/assets/image/logo.png') ?>" alt="BookEZ Logo" class="h-8 w-auto mr-2 inline-block object-contain logo-scale">
-        </a>
-        <a href="?page=profile" class="flex items-center gap-3">
-            <span class="text-xl font-bold text-gray-800"><?= isset($_SESSION['user']) ? htmlspecialchars($_SESSION['user']['username']) : 'Guest' ?></span>
-            <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 overflow-hidden">
-                <?php if (isset($_SESSION['user']['foto_profil']) && !empty($_SESSION['user']['foto_profil'])): ?>
-                    <img loading="lazy" src="<?= htmlspecialchars($asset($_SESSION['user']['foto_profil']), ENT_QUOTES) ?>" 
-                         alt="Foto Profil" 
-                         class="w-full h-full object-cover">
-                <?php else: ?>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                    </svg>
-                <?php endif; ?>
-            </div>
-        </a>
-    </nav>
+    <?php if (isset($_SESSION['user']) && in_array($_SESSION['user']['role'], ['Admin', 'Super Admin'])): ?>
+        <!-- ADMIN/SUPERADMIN DASHBOARD LAYOUT -->
+        <?php include __DIR__ . '/../components/navbar_admin.php'; ?>
+    <?php else: ?>
+        <!-- NAVBAR -->
+        <nav class="bg-white px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
+            <a href="?page=dashboard" class="flex items-center">
+                <!-- Logo -->
+                <img loading="lazy" src="<?= $asset('/assets/image/logo.png') ?>" alt="BookEZ Logo" class="h-8 w-auto mr-2 inline-block object-contain logo-scale">
+            </a>
+            <a href="?page=profile" class="flex items-center gap-3">
+                <span class="text-xl font-bold text-gray-800"><?= isset($_SESSION['user']) ? htmlspecialchars($_SESSION['user']['username']) : 'Guest' ?></span>
+                <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 overflow-hidden">
+                    <?php if (isset($_SESSION['user']['foto_profil']) && !empty($_SESSION['user']['foto_profil'])): ?>
+                        <img loading="lazy" src="<?= htmlspecialchars($asset($_SESSION['user']['foto_profil']), ENT_QUOTES) ?>"
+                            alt="Foto Profil"
+                            class="w-full h-full object-cover">
+                    <?php else: ?>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                        </svg>
+                    <?php endif; ?>
+                </div>
+            </a>
+        </nav>
+    <?php endif; ?>
 
     <!-- MAIN CONTAINER -->
     <main class="max-w-7xl mx-auto p-6 md:p-10 flex flex-col md:flex-row gap-8">
@@ -270,9 +275,9 @@ require __DIR__ . '/../components/head.php';
                 <!-- Avatar Besar -->
                 <div class="h-32 w-32 rounded-full bg-gray-200 mx-auto mb-6 flex items-center justify-center relative group cursor-pointer overflow-hidden" id="avatarContainer">
                     <?php if (isset($_SESSION['user']['foto_profil']) && !empty($_SESSION['user']['foto_profil'])): ?>
-                        <img loading="lazy" src="<?= htmlspecialchars($asset($_SESSION['user']['foto_profil']), ENT_QUOTES) ?>" 
-                             alt="Foto Profil" 
-                             class="w-full h-full object-cover">
+                        <img loading="lazy" src="<?= htmlspecialchars($asset($_SESSION['user']['foto_profil']), ENT_QUOTES) ?>"
+                            alt="Foto Profil"
+                            class="w-full h-full object-cover">
                     <?php else: ?>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
@@ -345,19 +350,19 @@ require __DIR__ . '/../components/head.php';
 
                         <!-- ROW 1: Booking Eksternal -->
                         <?php if ($_SESSION['user']['role'] === 'Super Admin'): ?>
-                        <a href="?page=admin&action=booking_external" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-4 h-84 lg:h-95">
-                            <div class="absolute inset-0 bg-gray-200">
-                                <img loading="lazy" src="<?= $asset('/assets/image/thumb_handshake.png') ?>"
-                                    alt="Booking Eksternal"
-                                    class="card-zoom-image w-full h-full object-cover">
-                            </div>
-                            <!-- Label Button -->
-                            <div class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                                <div class="bg-sky-400/90 backdrop-blur-sm px-8 py-3 rounded-lg shadow-lg">
-                                    <span class="text-slate-900 font-bold text-lg lg:text-xl whitespace-nowrap">Booking Eksternal</span>
+                            <a href="?page=admin&action=booking_external" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-4 h-84 lg:h-95">
+                                <div class="absolute inset-0 bg-gray-200">
+                                    <img loading="lazy" src="<?= $asset('/assets/image/thumb_handshake.png') ?>"
+                                        alt="Booking Eksternal"
+                                        class="card-zoom-image w-full h-full object-cover">
                                 </div>
-                            </div>
-                        </a>
+                                <!-- Label Button -->
+                                <div class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                                    <div class="bg-sky-400/90 backdrop-blur-sm px-8 py-3 rounded-lg shadow-lg">
+                                        <span class="text-slate-900 font-bold text-lg lg:text-xl whitespace-nowrap">Booking Eksternal</span>
+                                    </div>
+                                </div>
+                            </a>
                         <?php endif; ?>
 
                         <!-- ROW 1: Kelola Ruangan -->
@@ -440,303 +445,303 @@ require __DIR__ . '/../components/head.php';
                 <div class="bg-white rounded-b-lg shadow-sm p-6 min-h-[500px]">
 
 
-                <!-- 1. TAB KODE BOOKING CONTENT -->
-                <div id="content-booking" class="tab-content flex items-center justify-center min-h-[450px]">
-                    <?php if ($active_booking): ?>
-                    <!-- Card Booking Aktif (Full Display) -->
-                    <div class="w-full max-w-4xl mx-auto">
-                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                            <div class="flex flex-col md:flex-row">
-                                <!--  -->
-                                <!-- Content Section -->
-                                <div class="grow md:w-3/5 p-8">
-                                    <div class="mb-6">
-                                        <div class="flex items-start justify-between gap-3 mb-2">
-                                            <h2 class="text-3xl font-bold text-gray-900"><?= htmlspecialchars($active_booking['nama_ruangan']) ?></h2>
-                                            <!-- Badge Role -->
-                                            <?php if (isset($active_booking['is_ketua']) && $active_booking['is_ketua'] == 1): ?>
-                                            <span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-300 whitespace-nowrap" title="Anda adalah ketua booking ini">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364zM3 11a1 1 0 011 1v1.42l1.246.712a1 1 0 11-.992 1.736l-1.75-1A1 1 0 012 14v-2a1 1 0 011-1zm14 0a1 1 0 011 1v2a1 1 0 01-.504.868l-1.75 1a1 1 0 11-.992-1.736L16 13.42V12a1 1 0 011-1zm-9.618 5.504a1 1 0 011.364-.372l.254.145V16a1 1 0 112 0v.277l.254-.145a1 1 0 11.992 1.736l-1.735.992a.995.995 0 01-1.022 0l-1.735-.992a1 1 0 01-.372-1.364z" clip-rule="evenodd" />
-                                                </svg>
-                                                KETUA
-                                            </span>
-                                            <?php else: ?>
-                                            <span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-700 border border-gray-300 whitespace-nowrap" title="Anda adalah anggota booking ini">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                                                </svg>
-                                                ANGGOTA
-                                            </span>
-                                            <?php endif; ?>
+                    <!-- 1. TAB KODE BOOKING CONTENT -->
+                    <div id="content-booking" class="tab-content flex items-center justify-center min-h-[450px]">
+                        <?php if ($active_booking): ?>
+                            <!-- Card Booking Aktif (Full Display) -->
+                            <div class="w-full max-w-4xl mx-auto">
+                                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                                    <div class="flex flex-col md:flex-row">
+                                        <!--  -->
+                                        <!-- Content Section -->
+                                        <div class="grow md:w-3/5 p-8">
+                                            <div class="mb-6">
+                                                <div class="flex items-start justify-between gap-3 mb-2">
+                                                    <h2 class="text-3xl font-bold text-gray-900"><?= htmlspecialchars($active_booking['nama_ruangan']) ?></h2>
+                                                    <!-- Badge Role -->
+                                                    <?php if (isset($active_booking['is_ketua']) && $active_booking['is_ketua'] == 1): ?>
+                                                        <span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-300 whitespace-nowrap" title="Anda adalah ketua booking ini">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364zM3 11a1 1 0 011 1v1.42l1.246.712a1 1 0 11-.992 1.736l-1.75-1A1 1 0 012 14v-2a1 1 0 011-1zm14 0a1 1 0 011 1v2a1 1 0 01-.504.868l-1.75 1a1 1 0 11-.992-1.736L16 13.42V12a1 1 0 011-1zm-9.618 5.504a1 1 0 011.364-.372l.254.145V16a1 1 0 112 0v.277l.254-.145a1 1 0 11.992 1.736l-1.735.992a.995.995 0 01-1.022 0l-1.735-.992a1 1 0 01-.372-1.364z" clip-rule="evenodd" />
+                                                            </svg>
+                                                            KETUA
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-700 border border-gray-300 whitespace-nowrap" title="Anda adalah anggota booking ini">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                                            </svg>
+                                                            ANGGOTA
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <p class="text-gray-500 text-sm">Booking ID: <?= htmlspecialchars($active_booking["id_booking"]) ?></p>
+                                                <span class="inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full <?= $active_booking['nama_status'] === 'AKTIF' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' ?>">
+                                                    <?= $active_booking['nama_status'] ?>
+                                                </span>
+                                            </div>
+
+                                            <div class="space-y-4 mb-8">
+                                                <div class="flex items-start gap-4">
+                                                    <div class="p-3 bg-blue-50 rounded-lg">
+                                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm text-gray-500 font-medium">Tanggal Booking</p>
+                                                        <p class="text-lg font-bold text-gray-900"><?= date('d F Y', strtotime($active_booking['tanggal_schedule'])) ?></p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-start gap-4">
+                                                    <div class="p-3 bg-green-50 rounded-lg">
+                                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm text-gray-500 font-medium">Jam Pemakaian</p>
+                                                        <p class="text-lg font-bold text-gray-900"><?= date('H:i', strtotime($active_booking['waktu_mulai'])) ?> - <?= date('H:i', strtotime($active_booking['waktu_selesai'])) ?> WIB</p>
+                                                        <p class="text-sm text-gray-500">Durasi: <?= $active_booking['durasi_penggunaan'] ?> Menit</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-start gap-4">
+                                                    <div class="p-3 bg-purple-50 rounded-lg">
+                                                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm text-gray-500 font-medium">Kapasitas</p>
+                                                        <p class="text-lg font-bold text-gray-900"><?= $active_booking['minimal_kapasitas_ruangan'] ?>-<?= $active_booking['maksimal_kapasitas_ruangan'] ?> Orang</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Action Buttons -->
+                                            <?php
+                                            // Hitung apakah masih bisa reschedule (minimal 1 jam sebelum waktu mulai)
+                                            $waktu_mulai = new DateTime($active_booking['tanggal_schedule'] . ' ' . $active_booking['waktu_mulai']);
+                                            $sekarang = new DateTime();
+                                            $diff_hours = ($waktu_mulai->getTimestamp() - $sekarang->getTimestamp()) / 3600;
+                                            $can_reschedule = $diff_hours >= 1;
+                                            $is_ketua = isset($active_booking['is_ketua']) && $active_booking['is_ketua'] == 1;
+                                            ?>
+                                            <div class="flex flex-col sm:flex-row gap-3">
+                                                <a href="?page=booking&action=kode_booking&id=<?= $active_booking['id_booking'] ?>" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-center">
+                                                    Lihat Kode Booking
+                                                </a>
+                                                <?php if ($is_ketua): ?>
+                                                    <?php if ($can_reschedule): ?>
+                                                        <a href="?page=booking&action=reschedule&id=<?= $active_booking['id_booking'] ?>" class="flex-1 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-600 px-6 py-3 rounded-lg font-semibold transition-colors text-center" title="✅ Hanya ketua yang bisa reschedule">
+                                                            Reschedule
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <button disabled class="flex-1 bg-gray-100 text-gray-400 border-2 border-gray-200 px-6 py-3 rounded-lg font-semibold cursor-not-allowed text-center" title="Reschedule hanya bisa dilakukan minimal 1 jam sebelum waktu mulai">
+                                                            Reschedule (Tidak Tersedia)
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <a href="?page=booking&action=hapus_booking&id=<?= $active_booking['id_booking'] ?>" class="sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-center" title="✅ Hanya ketua yang bisa batalkan">
+                                                        Batalkan
+                                                    </a>
+                                                <?php else: ?>
+                                                    <button disabled class="flex-1 bg-gray-100 text-gray-400 border-2 border-gray-200 px-6 py-3 rounded-lg font-semibold cursor-not-allowed text-center" title="❌ Hanya ketua yang bisa reschedule booking">
+                                                        Reschedule (Khusus Ketua)
+                                                    </button>
+                                                    <button disabled class="sm:w-auto bg-gray-100 text-gray-400 px-6 py-3 rounded-lg font-semibold cursor-not-allowed text-center" title="❌ Hanya ketua yang bisa batalkan booking">
+                                                        Batalkan (Khusus Ketua)
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
-                                        <p class="text-gray-500 text-sm">Booking ID: <?= htmlspecialchars($active_booking["id_booking"]) ?></p>
-                                        <span class="inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full <?= $active_booking['nama_status'] === 'AKTIF' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' ?>">
-                                            <?= $active_booking['nama_status'] ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <!-- No Active Booking -->
+                            <div class="text-center py-12">
+                                <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <h3 class="mt-4 text-xl font-semibold text-gray-900">Tidak Ada Booking Aktif</h3>
+                                <p class="mt-2 text-gray-600">Anda belum memiliki booking aktif saat ini.</p>
+                                <a href="?page=dashboard" class="mt-6 inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg">
+                                    Buat Booking Baru
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- 2. TAB HISTORY PEMINJAMAN CONTENT -->
+                    <div id="content-history" class="tab-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <?php if (!empty($history_bookings)): ?>
+                                <?php foreach ($history_bookings as $booking): ?>
+                                    <!-- History Card -->
+                                    <div class="rounded-xl p-3 flex gap-3 shadow-sm border border-gray-200 hover:shadow-md transition">
+                                        <img loading="lazy" src="<?= $asset("/assets/image/gambar ruangan.jpg") ?>" class="w-24 h-24 object-cover rounded-lg" alt="<?= htmlspecialchars($booking['nama_ruangan']) ?>">
+                                        <div class="flex-1">
+                                            <h3 class="font-bold text-gray-800 text-sm"><?= htmlspecialchars($booking['nama_ruangan']) ?></h3>
+                                            <div class="text-xs text-gray-500 mt-1 space-y-1">
+                                                <p>📅 <?= date('d F Y', strtotime($booking['tanggal_schedule'])) ?></p>
+                                                <p>🕒 <?= date('H:i', strtotime($booking['waktu_mulai'])) ?> - <?= date('H:i', strtotime($booking['waktu_selesai'])) ?></p>
+                                                <p>Status : <span class="font-semibold <?= $booking['nama_status'] === 'AKTIF' ? 'text-green-600' : ($booking['nama_status'] === 'SELESAI' ? 'text-blue-600' : 'text-red-600') ?>"><?= $booking['nama_status'] ?></span></p>
+                                                <p>⏱ Durasi : <?= $booking['durasi_penggunaan'] ?> Menit</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="col-span-2 text-center py-12">
+                                    <p class="text-gray-500">Belum ada riwayat peminjaman</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Pagination History -->
+                        <?php if (isset($paginationHistory) && $paginationHistory['totalPages'] > 1): ?>
+                            <div class="mt-6 flex justify-center">
+                                <?php
+                                $currentPage = $paginationHistory['currentPage'];
+                                $totalPages = $paginationHistory['totalPages'];
+                                ?>
+                                <nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">
+                                    <?php if ($currentPage > 1): ?>
+                                        <a href="?page=profile&pg_history=<?= $currentPage - 1 ?>"
+                                            class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
+                                            &laquo; Prev
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-l-md cursor-not-allowed">
+                                            &laquo; Prev
                                         </span>
-                                    </div>
+                                    <?php endif; ?>
 
-                                    <div class="space-y-4 mb-8">
-                                        <div class="flex items-start gap-4">
-                                            <div class="p-3 bg-blue-50 rounded-lg">
-                                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm text-gray-500 font-medium">Tanggal Booking</p>
-                                                <p class="text-lg font-bold text-gray-900"><?= date('d F Y', strtotime($active_booking['tanggal_schedule'])) ?></p>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-start gap-4">
-                                            <div class="p-3 bg-green-50 rounded-lg">
-                                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm text-gray-500 font-medium">Jam Pemakaian</p>
-                                                <p class="text-lg font-bold text-gray-900"><?= date('H:i', strtotime($active_booking['waktu_mulai'])) ?> - <?= date('H:i', strtotime($active_booking['waktu_selesai'])) ?> WIB</p>
-                                                <p class="text-sm text-gray-500">Durasi: <?= $active_booking['durasi_penggunaan'] ?> Menit</p>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-start gap-4">
-                                            <div class="p-3 bg-purple-50 rounded-lg">
-                                                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm text-gray-500 font-medium">Kapasitas</p>
-                                                <p class="text-lg font-bold text-gray-900"><?= $active_booking['minimal_kapasitas_ruangan'] ?>-<?= $active_booking['maksimal_kapasitas_ruangan'] ?> Orang</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Action Buttons -->
                                     <?php
-                                    // Hitung apakah masih bisa reschedule (minimal 1 jam sebelum waktu mulai)
-                                    $waktu_mulai = new DateTime($active_booking['tanggal_schedule'] . ' ' . $active_booking['waktu_mulai']);
-                                    $sekarang = new DateTime();
-                                    $diff_hours = ($waktu_mulai->getTimestamp() - $sekarang->getTimestamp()) / 3600;
-                                    $can_reschedule = $diff_hours >= 1;
-                                    $is_ketua = isset($active_booking['is_ketua']) && $active_booking['is_ketua'] == 1;
+                                    $range = 2;
+                                    $startPage = max(1, $currentPage - $range);
+                                    $endPage = min($totalPages, $currentPage + $range);
+                                    for ($i = $startPage; $i <= $endPage; $i++):
                                     ?>
-                                    <div class="flex flex-col sm:flex-row gap-3">
-                                        <a href="?page=booking&action=kode_booking&id=<?= $active_booking['id_booking'] ?>" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-center">
-                                            Lihat Kode Booking
-                                        </a>
-                                        <?php if ($is_ketua): ?>
-                                            <?php if ($can_reschedule): ?>
-                                            <a href="?page=booking&action=reschedule&id=<?= $active_booking['id_booking'] ?>" class="flex-1 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-600 px-6 py-3 rounded-lg font-semibold transition-colors text-center" title="✅ Hanya ketua yang bisa reschedule">
-                                                Reschedule
-                                            </a>
-                                            <?php else: ?>
-                                            <button disabled class="flex-1 bg-gray-100 text-gray-400 border-2 border-gray-200 px-6 py-3 rounded-lg font-semibold cursor-not-allowed text-center" title="Reschedule hanya bisa dilakukan minimal 1 jam sebelum waktu mulai">
-                                                Reschedule (Tidak Tersedia)
-                                            </button>
-                                            <?php endif; ?>
-                                            <a href="?page=booking&action=hapus_booking&id=<?= $active_booking['id_booking'] ?>" class="sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg text-center" title="✅ Hanya ketua yang bisa batalkan">
-                                                Batalkan
-                                            </a>
+                                        <?php if ($i == $currentPage): ?>
+                                            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600">
+                                                <?= $i ?>
+                                            </span>
                                         <?php else: ?>
-                                            <button disabled class="flex-1 bg-gray-100 text-gray-400 border-2 border-gray-200 px-6 py-3 rounded-lg font-semibold cursor-not-allowed text-center" title="❌ Hanya ketua yang bisa reschedule booking">
-                                                Reschedule (Khusus Ketua)
-                                            </button>
-                                            <button disabled class="sm:w-auto bg-gray-100 text-gray-400 px-6 py-3 rounded-lg font-semibold cursor-not-allowed text-center" title="❌ Hanya ketua yang bisa batalkan booking">
-                                                Batalkan (Khusus Ketua)
-                                            </button>
+                                            <a href="?page=profile&pg_history=<?= $i ?>"
+                                                class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-gray-50">
+                                                <?= $i ?>
+                                            </a>
                                         <?php endif; ?>
+                                    <?php endfor; ?>
+
+                                    <?php if ($currentPage < $totalPages): ?>
+                                        <a href="?page=profile&pg_history=<?= $currentPage + 1 ?>"
+                                            class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
+                                            Next &raquo;
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-r-md cursor-not-allowed">
+                                            Next &raquo;
+                                        </span>
+                                    <?php endif; ?>
+                                </nav>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- 3. TAB PELANGGARAN CONTENT -->
+                    <div id="content-pelanggaran" class="tab-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <?php if (!empty($pelanggaran_list)): ?>
+                                <?php foreach ($pelanggaran_list as $pelanggaran): ?>
+                                    <!-- Pelanggaran Card -->
+                                    <div class="rounded-xl p-4 flex gap-3 shadow-sm border border-gray-200 hover:shadow-md transition">
+                                        <div class="shrink-0">
+                                            <div class="w-16 h-16 bg-red-50 rounded-lg flex items-center justify-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h3 class="font-bold text-gray-800 text-sm mb-2"><?= htmlspecialchars($pelanggaran['jenis_pelanggaran']) ?></h3>
+                                            <div class="text-xs text-gray-500 space-y-1">
+                                                <p>📅 <span class="font-medium">Tanggal:</span> <?= date('d M Y', strtotime($pelanggaran['tanggal_mulai'])) ?></p>
+                                                <?php if ($pelanggaran['tanggal_selesai'] && strtotime($pelanggaran['tanggal_selesai']) > strtotime($pelanggaran['tanggal_mulai'])): ?>
+                                                    <p>⏰ <span class="font-medium">Selesai:</span> <?= date('d M Y', strtotime($pelanggaran['tanggal_selesai'])) ?></p>
+                                                <?php endif; ?>
+                                                <?php if (!empty($pelanggaran['alasan_suspensi'])): ?>
+                                                    <p class="text-gray-700 mt-2">📜 <span class="font-medium">Detail:</span> <?= htmlspecialchars($pelanggaran['alasan_suspensi']) ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php else: ?>
-                    <!-- No Active Booking -->
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <h3 class="mt-4 text-xl font-semibold text-gray-900">Tidak Ada Booking Aktif</h3>
-                        <p class="mt-2 text-gray-600">Anda belum memiliki booking aktif saat ini.</p>
-                        <a href="?page=dashboard" class="mt-6 inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg">
-                            Buat Booking Baru
-                        </a>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- 2. TAB HISTORY PEMINJAMAN CONTENT -->
-                <div id="content-history" class="tab-content hidden">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <?php if (!empty($history_bookings)): ?>
-                        <?php foreach ($history_bookings as $booking): ?>
-                        <!-- History Card -->
-                        <div class="rounded-xl p-3 flex gap-3 shadow-sm border border-gray-200 hover:shadow-md transition">
-                            <img loading="lazy" src="<?= $asset("/assets/image/gambar ruangan.jpg") ?>" class="w-24 h-24 object-cover rounded-lg" alt="<?= htmlspecialchars($booking['nama_ruangan']) ?>">
-                            <div class="flex-1">
-                                <h3 class="font-bold text-gray-800 text-sm"><?= htmlspecialchars($booking['nama_ruangan']) ?></h3>
-                                <div class="text-xs text-gray-500 mt-1 space-y-1">
-                                    <p>📅 <?= date('d F Y', strtotime($booking['tanggal_schedule'])) ?></p>
-                                    <p>🕒 <?= date('H:i', strtotime($booking['waktu_mulai'])) ?> - <?= date('H:i', strtotime($booking['waktu_selesai'])) ?></p>
-                                    <p>Status : <span class="font-semibold <?= $booking['nama_status'] === 'AKTIF' ? 'text-green-600' : ($booking['nama_status'] === 'SELESAI' ? 'text-blue-600' : 'text-red-600') ?>"><?= $booking['nama_status'] ?></span></p>
-                                    <p>⏱ Durasi : <?= $booking['durasi_penggunaan'] ?> Menit</p>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="col-span-2 text-center py-12">
-                            <p class="text-gray-500">Belum ada riwayat peminjaman</p>
-                        </div>
-                    <?php endif; ?>
-                    </div>
-                    
-                    <!-- Pagination History -->
-                    <?php if (isset($paginationHistory) && $paginationHistory['totalPages'] > 1): ?>
-                        <div class="mt-6 flex justify-center">
-                            <?php
-                            $currentPage = $paginationHistory['currentPage'];
-                            $totalPages = $paginationHistory['totalPages'];
-                            ?>
-                            <nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">
-                                <?php if ($currentPage > 1): ?>
-                                    <a href="?page=profile&pg_history=<?= $currentPage - 1 ?>" 
-                                       class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
-                                        &laquo; Prev
-                                    </a>
-                                <?php else: ?>
-                                    <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-l-md cursor-not-allowed">
-                                        &laquo; Prev
-                                    </span>
-                                <?php endif; ?>
-
-                                <?php 
-                                $range = 2;
-                                $startPage = max(1, $currentPage - $range);
-                                $endPage = min($totalPages, $currentPage + $range);
-                                for ($i = $startPage; $i <= $endPage; $i++): 
-                                ?>
-                                    <?php if ($i == $currentPage): ?>
-                                        <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600">
-                                            <?= $i ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <a href="?page=profile&pg_history=<?= $i ?>" 
-                                           class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-gray-50">
-                                            <?= $i ?>
-                                        </a>
-                                    <?php endif; ?>
-                                <?php endfor; ?>
-
-                                <?php if ($currentPage < $totalPages): ?>
-                                    <a href="?page=profile&pg_history=<?= $currentPage + 1 ?>" 
-                                       class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
-                                        Next &raquo;
-                                    </a>
-                                <?php else: ?>
-                                    <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-r-md cursor-not-allowed">
-                                        Next &raquo;
-                                    </span>
-                                <?php endif; ?>
-                            </nav>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- 3. TAB PELANGGARAN CONTENT -->
-                <div id="content-pelanggaran" class="tab-content hidden">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <?php if (!empty($pelanggaran_list)): ?>
-                        <?php foreach ($pelanggaran_list as $pelanggaran): ?>
-                        <!-- Pelanggaran Card -->
-                        <div class="rounded-xl p-4 flex gap-3 shadow-sm border border-gray-200 hover:shadow-md transition">
-                            <div class="shrink-0">
-                                <div class="w-16 h-16 bg-red-50 rounded-lg flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="col-span-2 text-center py-12">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-24 w-24 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
+                                    <h3 class="mt-4 text-lg font-semibold text-gray-900">Tidak Ada Pelanggaran</h3>
+                                    <p class="mt-2 text-gray-600">Selamat! Anda tidak memiliki catatan pelanggaran.</p>
                                 </div>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="font-bold text-gray-800 text-sm mb-2"><?= htmlspecialchars($pelanggaran['jenis_pelanggaran']) ?></h3>
-                                <div class="text-xs text-gray-500 space-y-1">
-                                    <p>📅 <span class="font-medium">Tanggal:</span> <?= date('d M Y', strtotime($pelanggaran['tanggal_mulai'])) ?></p>
-                                    <?php if ($pelanggaran['tanggal_selesai'] && strtotime($pelanggaran['tanggal_selesai']) > strtotime($pelanggaran['tanggal_mulai'])): ?>
-                                    <p>⏰ <span class="font-medium">Selesai:</span> <?= date('d M Y', strtotime($pelanggaran['tanggal_selesai'])) ?></p>
-                                    <?php endif; ?>
-                                    <?php if (!empty($pelanggaran['alasan_suspensi'])): ?>
-                                    <p class="text-gray-700 mt-2">📜 <span class="font-medium">Detail:</span> <?= htmlspecialchars($pelanggaran['alasan_suspensi']) ?></p>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="col-span-2 text-center py-12">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-24 w-24 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <h3 class="mt-4 text-lg font-semibold text-gray-900">Tidak Ada Pelanggaran</h3>
-                            <p class="mt-2 text-gray-600">Selamat! Anda tidak memiliki catatan pelanggaran.</p>
-                        </div>
-                    <?php endif; ?>
-                    </div>
-                    
-                    <!-- Pagination Pelanggaran -->
-                    <?php if (isset($paginationPelanggaran) && $paginationPelanggaran['totalPages'] > 1): ?>
-                        <div class="mt-6 flex justify-center">
-                            <?php
-                            $currentPage = $paginationPelanggaran['currentPage'];
-                            $totalPages = $paginationPelanggaran['totalPages'];
-                            ?>
-                            <nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">
-                                <?php if ($currentPage > 1): ?>
-                                    <a href="?page=profile&pg_pelanggaran=<?= $currentPage - 1 ?>" 
-                                       class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
-                                        &laquo; Prev
-                                    </a>
-                                <?php else: ?>
-                                    <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-l-md cursor-not-allowed">
-                                        &laquo; Prev
-                                    </span>
-                                <?php endif; ?>
 
-                                <?php 
-                                $range = 2;
-                                $startPage = max(1, $currentPage - $range);
-                                $endPage = min($totalPages, $currentPage + $range);
-                                for ($i = $startPage; $i <= $endPage; $i++): 
+                        <!-- Pagination Pelanggaran -->
+                        <?php if (isset($paginationPelanggaran) && $paginationPelanggaran['totalPages'] > 1): ?>
+                            <div class="mt-6 flex justify-center">
+                                <?php
+                                $currentPage = $paginationPelanggaran['currentPage'];
+                                $totalPages = $paginationPelanggaran['totalPages'];
                                 ?>
-                                    <?php if ($i == $currentPage): ?>
-                                        <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600">
-                                            <?= $i ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <a href="?page=profile&pg_pelanggaran=<?= $i ?>" 
-                                           class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-gray-50">
-                                            <?= $i ?>
+                                <nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">
+                                    <?php if ($currentPage > 1): ?>
+                                        <a href="?page=profile&pg_pelanggaran=<?= $currentPage - 1 ?>"
+                                            class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
+                                            &laquo; Prev
                                         </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-l-md cursor-not-allowed">
+                                            &laquo; Prev
+                                        </span>
                                     <?php endif; ?>
-                                <?php endfor; ?>
 
-                                <?php if ($currentPage < $totalPages): ?>
-                                    <a href="?page=profile&pg_pelanggaran=<?= $currentPage + 1 ?>" 
-                                       class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
-                                        Next &raquo;
-                                    </a>
-                                <?php else: ?>
-                                    <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-r-md cursor-not-allowed">
-                                        Next &raquo;
-                                    </span>
-                                <?php endif; ?>
-                            </nav>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                                    <?php
+                                    $range = 2;
+                                    $startPage = max(1, $currentPage - $range);
+                                    $endPage = min($totalPages, $currentPage + $range);
+                                    for ($i = $startPage; $i <= $endPage; $i++):
+                                    ?>
+                                        <?php if ($i == $currentPage): ?>
+                                            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600">
+                                                <?= $i ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <a href="?page=profile&pg_pelanggaran=<?= $i ?>"
+                                                class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border-t border-b border-gray-300 hover:bg-gray-50">
+                                                <?= $i ?>
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+
+                                    <?php if ($currentPage < $totalPages): ?>
+                                        <a href="?page=profile&pg_pelanggaran=<?= $currentPage + 1 ?>"
+                                            class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
+                                            Next &raquo;
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-300 rounded-r-md cursor-not-allowed">
+                                            Next &raquo;
+                                        </span>
+                                    <?php endif; ?>
+                                </nav>
+                            </div>
+                        <?php endif; ?>
+                    </div>
 
                 </div>
             <?php endif; ?>
@@ -764,9 +769,9 @@ require __DIR__ . '/../components/head.php';
                 <div class="mb-6">
                     <div id="previewContainer" class="w-48 h-48 rounded-full bg-gray-100 mx-auto flex items-center justify-center overflow-hidden border-4 border-gray-200">
                         <?php if (isset($_SESSION['user']['foto_profil']) && !empty($_SESSION['user']['foto_profil'])): ?>
-                            <img loading="lazy" id="previewImage" src="<?= htmlspecialchars($asset($_SESSION['user']['foto_profil']), ENT_QUOTES) ?>" 
-                                 alt="Preview" 
-                                 class="w-full h-full object-cover">
+                            <img loading="lazy" id="previewImage" src="<?= htmlspecialchars($asset($_SESSION['user']['foto_profil']), ENT_QUOTES) ?>"
+                                alt="Preview"
+                                class="w-full h-full object-cover">
                         <?php else: ?>
                             <svg id="previewIcon" xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
@@ -780,12 +785,12 @@ require __DIR__ . '/../components/head.php';
                     <label for="fotoProfil" class="block text-sm font-medium text-gray-700 mb-2">
                         Pilih Foto (JPEG, PNG, WebP - Max 25MB)
                     </label>
-                    <input type="file" 
-                           name="foto_profil" 
-                           id="fotoProfil" 
-                           accept="image/jpeg,image/png,image/webp" 
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="file"
+                        name="foto_profil"
+                        id="fotoProfil"
+                        accept="image/jpeg,image/png,image/webp"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
 
                 <!-- Buttons -->
@@ -803,15 +808,15 @@ require __DIR__ . '/../components/head.php';
 
     <!-- Script untuk Interaksi Tab -->
     <?php if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['Admin', 'Super Admin'])): ?>
-    <script src="<?= $asset("/assets/js/profile.js") ?>" defer></script>
+        <script src="<?= $asset("/assets/js/profile.js") ?>" defer></script>
     <?php endif; ?>
     <script src="<?= $asset('/assets/js/auth.js') ?>" defer></script>
-    
+
     <?php if (isset($_SESSION['user']) && in_array($_SESSION['user']['role'], ['Admin', 'Super Admin'])): ?>
-    <link rel="stylesheet" href="<?= $asset('assets/css/admin-dashboard.css') ?>">
-    <!-- Data akan di-inject melalui data attributes -->
-    <div id="profile-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
-    <script src="<?= $asset('/assets/js/admin.js') ?>" defer></script>
+        <link rel="stylesheet" href="<?= $asset('assets/css/admin-dashboard.css') ?>">
+        <!-- Data akan di-inject melalui data attributes -->
+        <div id="profile-data" data-base-path="<?= $basePath ?>" style="display:none;"></div>
+        <script src="<?= $asset('/assets/js/admin.js') ?>" defer></script>
     <?php endif; ?>
 </body>
 
