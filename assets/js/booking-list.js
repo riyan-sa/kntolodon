@@ -173,8 +173,9 @@ function openCheckinModal(idBooking) {
                     
                     if (modalCheckin) {
                         modalCheckin.style.display = 'flex'; // Force display
-                        modalCheckin.classList.remove('hidden');
+                        // modalCheckin.classList.remove('hidden');
                         modalCheckin.classList.add('flex');
+                        modalCheckin.hidden = false;
                         console.log('Modal opened successfully');
                     } else {
                         console.error('Modal element not found!');
@@ -197,10 +198,13 @@ function openCheckinModal(idBooking) {
 
 // Close modal
 function closeCheckinModal() {
+    console.log(modalCheckin.attributes.getNamedItem("class"));
+    
     modalCheckin.classList.remove('flex');
-    modalCheckin.classList.add('hidden');
+    modalCheckin.hidden = true;
     currentBookingId = null;
     currentBookingData = null;
+    console.log(modalCheckin.attributes.getNamedItem("class"));
 }
 
 // Render modal content

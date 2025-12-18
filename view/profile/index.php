@@ -350,7 +350,7 @@ require __DIR__ . '/../components/head.php';
 
                         <!-- ROW 1: Booking Eksternal -->
                         <?php if ($_SESSION['user']['role'] === 'Super Admin'): ?>
-                            <a href="?page=admin&action=booking_external" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-4 h-84 lg:h-95">
+                            <a href="?page=admin&action=booking_external" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-4 h-84 lg:h-35">
                                 <div class="absolute inset-0 bg-gray-200">
                                     <img loading="lazy" src="<?= $asset('/assets/image/thumb_handshake.png') ?>"
                                         alt="Booking Eksternal"
@@ -366,7 +366,7 @@ require __DIR__ . '/../components/head.php';
                         <?php endif; ?>
 
                         <!-- ROW 1: Kelola Ruangan -->
-                        <a href="?page=admin&action=kelola_ruangan" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-3 h-84 lg:h-95">
+                        <a href="?page=admin&action=kelola_ruangan" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-3 h-84 lg:h-35">
                             <div class="absolute inset-0 bg-gray-200">
                                 <img loading="lazy" src="<?= $asset('/assets/image/room.png') ?>"
                                     alt="Kelola Ruangan"
@@ -420,6 +420,29 @@ require __DIR__ . '/../components/head.php';
                                 </div>
                             </div>
                         </a>
+
+                        <!-- ROW 3: Pengaturan (Super Admin Only) -->
+                        <?php if ($_SESSION['user']['role'] === 'Super Admin'): ?>
+                            <a href="?page=admin&action=pengaturan" class="relative group overflow-hidden rounded-2xl shadow-sm hover:shadow-md cursor-pointer col-span-1 lg:col-span-7 h-48 lg:h-56">
+                                <div class="absolute inset-0 bg-linear-to-r from-sky-500 to-blue-600">
+                                    <div class="absolute inset-0 opacity-10">
+                                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+                                            <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                                    <div class="bg-white/95 backdrop-blur-sm px-10 py-4 rounded-lg shadow-lg">
+                                        <div class="flex items-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                            </svg>
+                                            <span class="text-slate-900 font-bold text-lg lg:text-xl whitespace-nowrap">Pengaturan Sistem</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        <?php endif; ?>
 
                     </div>
                 </div>
